@@ -1,0 +1,51 @@
+/* Custom styles for studiPraxis */
+body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3 {
+    color: #197c4d;  /* A soft green tone */
+}
+
+.block-container {
+    padding-top: 3rem;
+}
+
+.stButton > button {
+    background-color: #1e8e5a !important;
+    color: white !important;
+    border-radius: 8px;
+    padding: 0.5em 1em;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+.stButton > button:hover {
+    background-color: #166c42 !important;
+}
+
+/* Style for form elements */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div > div {
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Style for the main content area */
+.main .block-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 3rem;
+}
+
+/* Style for select box when focused */
+.stSelectbox > div > div > div:focus-within {
+    border-color: #1e8e5a !important;
+    box-shadow: 0 0 0 1px #1e8e5a !important;
+}
+
+/* Style for the title container */
+div[data-testid="stMarkdownContainer"] {
+    margin-top: 2rem !important;
+}

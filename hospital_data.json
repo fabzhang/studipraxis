@@ -1,0 +1,112 @@
+[
+    {
+        "hospital_name": "University Hospital Zurich",
+        "department": "Cardiology",
+        "title": "Cardiology Research Assistant",
+        "description": "Assist in outpatient clinic and support data collection for heart failure research studies.",
+        "duration": "3 months",
+        "requirements": "Basic ECG knowledge, 2nd-year medical student or above",
+        "location": "Zurich",
+        "stipend": "700 CHF/month"
+    },
+    {
+        "hospital_name": "Geneva General Hospital",
+        "department": "Pediatrics",
+        "title": "Pediatric Ward Student Helper",
+        "description": "Support pediatric nurses with day-to-day tasks and assist in play therapy activities.",
+        "duration": "4 weeks",
+        "requirements": "Interest in pediatrics, vaccination proof",
+        "location": "Geneva",
+        "stipend": "None"
+    },
+    {
+        "hospital_name": "Bern University Hospital",
+        "department": "Orthopedics",
+        "title": "Surgical Prep Assistant",
+        "description": "Help prepare ORs, organize instruments, and observe orthopedic surgeries.",
+        "duration": "6 weeks",
+        "requirements": "Surgical hygiene course completed",
+        "location": "Bern",
+        "stipend": "500 CHF/month"
+    },
+    {
+        "hospital_name": "Inselspital Bern",
+        "department": "Neurology",
+        "title": "Neurodiagnostics Support Assistant",
+        "description": "Shadow neurologists, assist in EEG test setups and patient coordination.",
+        "duration": "2 months",
+        "requirements": "Comfort interacting with patients, fluent in German",
+        "location": "Bern",
+        "stipend": "600 CHF/month"
+    },
+    {
+        "hospital_name": "Lausanne University Hospital (CHUV)",
+        "department": "Emergency Medicine",
+        "title": "ED Triage Assistant",
+        "description": "Support triage desk, observe trauma team, and assist with patient flow.",
+        "duration": "1 month",
+        "requirements": "Completed clinical rotations in internal medicine",
+        "location": "Lausanne",
+        "stipend": "800 CHF/month"
+    },
+    {
+        "hospital_name": "Basel City Hospital",
+        "department": "Radiology",
+        "title": "Radiology Workflow Assistant",
+        "description": "Assist radiology staff with patient intake, scan scheduling, and clerical work.",
+        "duration": "3 months",
+        "requirements": "Fluent in German and basic anatomy knowledge",
+        "location": "Basel",
+        "stipend": "400 CHF/month"
+    },
+    {
+        "hospital_name": "Lucerne Cantonal Hospital",
+        "department": "Internal Medicine",
+        "title": "Inpatient Rounds Observer",
+        "description": "Join internal medicine rounds and help with digital record updates.",
+        "duration": "2 weeks",
+        "requirements": "3rd-year student or above",
+        "location": "Lucerne",
+        "stipend": "None"
+    },
+    {
+        "hospital_name": "St. Gallen Regional Hospital",
+        "department": "Dermatology",
+        "title": "Clinical Photography Assistant",
+        "description": "Assist in documentation of skin conditions and maintain image database.",
+        "duration": "1 month",
+        "requirements": "Photography interest/skills a plus",
+        "location": "St. Gallen",
+        "stipend": "300 CHF/month"
+    },
+    {
+        "hospital_name": "Zurich Private Clinic",
+        "department": "Plastic Surgery",
+        "title": "Operating Room Observer",
+        "description": "Observe surgical procedures, help prepare case summaries for teaching.",
+        "duration": "6 weeks",
+        "requirements": "Letter of motivation required",
+        "location": "Zurich",
+        "stipend": "1000 CHF/month"
+    },
+    {
+        "hospital_name": "Fribourg Cantonal Hospital",
+        "department": "Psychiatry",
+        "title": "Mental Health Assistant",
+        "description": "Assist in group therapy sessions and patient documentation.",
+        "duration": "8 weeks",
+        "requirements": "Basic French, interest in psychiatry",
+        "location": "Fribourg",
+        "stipend": "500 CHF/month"
+    },
+    {
+        "hospital_name": "waidspital",
+        "department": "cardio",
+        "title": "xxx",
+        "description": "",
+        "duration": "",
+        "requirements": "",
+        "location": "",
+        "stipend": ""
+    }
+]
