@@ -1,5 +1,5 @@
 import streamlit as st
-from student_view import student_view
+from frontend.components.student_view import student_view
 
 st.set_page_config(
     page_title="Student*innen Profile - studiPraxis",

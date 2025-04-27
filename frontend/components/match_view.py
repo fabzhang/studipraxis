@@ -45,6 +45,10 @@ def create_map(hospitals, selected_department="Alle Abteilungen"):
 def match_view():
     st.header("🔍 Browse Assistantship Positions")
     
+    # Add refresh button
+    if st.button("🔄 Aktualisieren"):
+        st.experimental_rerun()
+    
     # Get all hospitals
     data_service = DataService()
     hospitals = data_service.get_hospitals()

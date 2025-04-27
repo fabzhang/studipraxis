@@ -17,14 +17,23 @@ class StudentProfile:
 class HospitalProfile:
     id: str
     name: str
+    email: str
+    password_hash: str
+    location: str
+    latitude: float
+    longitude: float
+    created_at: datetime
+    updated_at: datetime
+
+@dataclass
+class Position:
+    id: str
+    hospital_id: str
     department: str
     title: str
     description: str
     duration: str
     requirements: List[str]
-    location: str
-    latitude: float  # Hamburg coordinates
-    longitude: float  # Hamburg coordinates
     stipend: Optional[float]
     created_at: datetime
     updated_at: datetime
@@ -42,7 +51,7 @@ class Message:
 class Match:
     id: str
     student_id: str
-    hospital_id: str
+    position_id: str
     status: str  # 'pending', 'accepted', 'rejected'
     created_at: datetime
     updated_at: datetime 

@@ -23,7 +23,7 @@ def hospital_form():
         title = st.text_input("Position Title")
         description = st.text_area("Description")
         duration = st.text_input("Duration (e.g., 3 months)")
-        requirements = st.text_input("Requirements")
+        requirements = st.text_input("Requirements (comma-separated)")
         location = st.text_input("Location")
         stipend = st.text_input("Stipend (optional)")
         
@@ -72,6 +72,7 @@ def hospital_form():
                 saved_hospital = data_service.create_hospital(hospital)
                 
                 st.success("Position submitted successfully!")
+                st.info("Bitte klicken Sie auf 'Aktualisieren' auf der Positionen-Seite, um die neue Position zu sehen.")
                 st.balloons()
                 
             except Exception as e:

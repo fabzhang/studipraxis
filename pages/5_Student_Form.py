@@ -1,5 +1,5 @@
 import streamlit as st
-from student_form import student_form
+from frontend.components.student_form import student_form
 
 st.set_page_config(
     page_title="Profil erstellen - studiPraxis",
