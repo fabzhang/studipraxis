@@ -6,6 +6,8 @@ from datetime import datetime
 class StudentProfile:
     id: str
     name: str
+    email: str
+    password_hash: str
     year: int
     interests: List[str]
     availability: str

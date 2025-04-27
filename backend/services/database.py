@@ -24,6 +24,8 @@ class DatabaseService:
                 CREATE TABLE IF NOT EXISTS students (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
                     year INTEGER NOT NULL,
                     interests TEXT NOT NULL,  -- JSON array of strings
                     availability TEXT NOT NULL,
@@ -108,12 +110,14 @@ class DatabaseService:
         return StudentProfile(
             id=row[0],
             name=row[1],
-            year=row[2],
-            interests=json.loads(row[3]),
-            availability=row[4],
-            certifications=json.loads(row[5]) if row[5] else None,
-            created_at=datetime.fromisoformat(row[6]),
-            updated_at=datetime.fromisoformat(row[7])
+            email=row[2],
+            password_hash=row[3],
+            year=row[4],
+            interests=json.loads(row[5]),
+            availability=row[6],
+            certifications=json.loads(row[7]) if row[7] else None,
+            created_at=datetime.fromisoformat(row[8]),
+            updated_at=datetime.fromisoformat(row[9])
         )
 
     def _dict_to_hospital(self, row: tuple) -> HospitalProfile:
@@ -176,12 +180,14 @@ class DatabaseService:
             student_id = str(uuid.uuid4())
             
             cursor.execute("""
-                INSERT INTO students (id, name, year, interests, availability, 
-                                    certifications, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO students (id, name, email, password_hash, year, interests,
+                                    availability, certifications, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 student_id,
                 student.name,
+                student.email,
+                student.password_hash,
                 student.year,
                 json.dumps(student.interests),
                 student.availability,
@@ -207,6 +213,46 @@ class DatabaseService:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM students")
             return [self._dict_to_student(row) for row in cursor.fetchall()]
+
+    def authenticate_student(self, email: str, password: str) -> Optional[StudentProfile]:
+        """Authenticate a student account."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM students WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            
+            if row and self._verify_password(row[3], password):
+                return self._dict_to_student(row)
+            return None
+
+    def create_student_account(self, name: str, email: str, password: str, year: int, 
+                             interests: List[str], availability: str, 
+                             certifications: Optional[List[str]] = None) -> StudentProfile:
+        """Create a new student account."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            student_id = str(uuid.uuid4())
+            
+            cursor.execute("""
+                INSERT INTO students (id, name, email, password_hash, year, interests,
+                                    availability, certifications, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                student_id,
+                name,
+                email,
+                self._hash_password(password),
+                year,
+                json.dumps(interests),
+                availability,
+                json.dumps(certifications) if certifications else None,
+                now,
+                now
+            ))
+            
+            conn.commit()
+            return self.get_student(student_id)
 
     # Hospital account operations
     def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float) -> HospitalProfile:
@@ -253,6 +299,13 @@ class DatabaseService:
             cursor.execute("SELECT * FROM hospitals WHERE id = ?", (hospital_id,))
             row = cursor.fetchone()
             return self._dict_to_hospital(row) if row else None
+
+    def get_hospitals(self) -> List[HospitalProfile]:
+        """Get all hospital profiles."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM hospitals")
+            return [self._dict_to_hospital(row) for row in cursor.fetchall()]
 
     # Position operations
     def create_position(self, position: Position) -> Position:
@@ -383,4 +436,63 @@ class DatabaseService:
                 WHERE student_id = ? OR position_id = ?
                 ORDER BY created_at DESC
             """, (user_id, user_id))
+            return [self._dict_to_match(row) for row in cursor.fetchall()]
+
+    def get_match_by_student_and_position(self, student_id: str, position_id: str) -> Optional[Match]:
+        """Get a match by student and position IDs."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM matches 
+                WHERE student_id = ? AND position_id = ?
+            """, (student_id, position_id))
+            row = cursor.fetchone()
+            return self._dict_to_match(row) if row else None
+
+    def update_match_status(self, match_id: str, status: str) -> Match:
+        """Update the status of a match."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            
+            cursor.execute("""
+                UPDATE matches 
+                SET status = ?, updated_at = ?
+                WHERE id = ?
+            """, (status, now, match_id))
+            
+            conn.commit()
+            return self.get_match(match_id)
+
+    def get_applications_for_position(self, position_id: str) -> List[Match]:
+        """Get all applications for a position."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM matches 
+                WHERE position_id = ? AND status = 'applied'
+                ORDER BY created_at DESC
+            """, (position_id,))
+            return [self._dict_to_match(row) for row in cursor.fetchall()]
+
+    def get_saved_positions_for_student(self, student_id: str) -> List[Match]:
+        """Get all saved positions for a student."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM matches 
+                WHERE student_id = ? AND status = 'saved'
+                ORDER BY created_at DESC
+            """, (student_id,))
+            return [self._dict_to_match(row) for row in cursor.fetchall()]
+
+    def get_applied_positions_for_student(self, student_id: str) -> List[Match]:
+        """Get all applied positions for a student."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM matches 
+                WHERE student_id = ? AND status = 'applied'
+                ORDER BY created_at DESC
+            """, (student_id,))
             return [self._dict_to_match(row) for row in cursor.fetchall()] 

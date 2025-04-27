@@ -15,5 +15,13 @@ with st.expander("Was bringt Ihnen die Plattform?"):
     - Rechtlich sichere Gestaltung von Werkstudentenverträgen möglich
     """)
 
-if st.button("Position ausschreiben", use_container_width=True, key="post_position"):
-    st.switch_page("pages/6_Institution_Form.py") 
+# Create two columns for the buttons
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Klinik anmelden", use_container_width=True, key="hospital_login"):
+        st.switch_page("pages/7_Hospital_Login.py")
+
+with col2:
+    if st.button("Neue Klinik registrieren", use_container_width=True, key="hospital_register"):
+        st.switch_page("pages/7_Hospital_Login.py") 
