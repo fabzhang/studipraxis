@@ -1,6 +1,7 @@
 import streamlit as st
 from backend.services.data_service import DataService
 from shared.types import HospitalProfile
+from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
 
 # Hamburg coordinates for reference
 HAMBURG_COORDINATES = {
@@ -19,13 +20,31 @@ def hospital_form():
     
     with st.form("hospital_form"):
         hospital_name = st.text_input("Hospital Name")
-        department = st.text_input("Department")
-        title = st.text_input("Position Title")
-        description = st.text_area("Description")
-        duration = st.text_input("Duration (e.g., 3 months)")
-        requirements = st.text_input("Requirements (comma-separated)")
-        location = st.text_input("Location")
-        stipend = st.text_input("Stipend (optional)")
+        
+        # Use selectbox for department
+        st.markdown("#### Abteilung")
+        st.info("Wählen Sie die Abteilung aus der Liste aus.")
+        department = st.selectbox(
+            "Abteilung",
+            options=MEDICAL_SPECIALTIES,
+            help="Wählen Sie die Abteilung für die Position."
+        )
+        
+        title = st.text_input("Positionstitel")
+        description = st.text_area("Beschreibung")
+        duration = st.text_input("Dauer (z.B. 3 Monate)")
+        
+        # Use multiselect for requirements
+        st.markdown("#### Anforderungen")
+        st.info("Wählen Sie die erforderlichen Zertifizierungen aus der Liste aus.")
+        requirements = st.multiselect(
+            "Anforderungen",
+            options=MEDICAL_CERTIFICATIONS,
+            help="Wählen Sie die erforderlichen Zertifizierungen für die Position."
+        )
+        
+        location = st.text_input("Standort")
+        stipend = st.text_input("Vergütung (optional)")
         
         # Add coordinates selection
         st.markdown("### Standort")
@@ -47,7 +66,7 @@ def hospital_form():
             latitude, longitude = HAMBURG_COORDINATES[selected_hospital]
             st.info(f"Koordinaten für {selected_hospital}: {latitude}, {longitude}")
 
-        submitted = st.form_submit_button("Submit Position")
+        submitted = st.form_submit_button("Position hinzufügen")
         if submitted:
             try:
                 # Create hospital profile
@@ -58,7 +77,7 @@ def hospital_form():
                     title=title,
                     description=description,
                     duration=duration,
-                    requirements=[r.strip() for r in requirements.split(",") if r.strip()],
+                    requirements=requirements,
                     location=location,
                     latitude=latitude,
                     longitude=longitude,
@@ -71,9 +90,9 @@ def hospital_form():
                 data_service = DataService()
                 saved_hospital = data_service.create_hospital(hospital)
                 
-                st.success("Position submitted successfully!")
+                st.success("Position erfolgreich hinzugefügt!")
                 st.info("Bitte klicken Sie auf 'Aktualisieren' auf der Positionen-Seite, um die neue Position zu sehen.")
                 st.balloons()
                 
             except Exception as e:
-                st.error(f"An error occurred: {str(e)}") 
+                st.error(f"Ein Fehler ist aufgetreten: {str(e)}") 

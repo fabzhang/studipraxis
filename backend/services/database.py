@@ -254,6 +254,32 @@ class DatabaseService:
             conn.commit()
             return self.get_student(student_id)
 
+    def update_student(self, student: StudentProfile) -> StudentProfile:
+        """Update an existing student profile by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            cursor.execute("""
+                UPDATE students SET
+                    name = ?,
+                    year = ?,
+                    interests = ?,
+                    availability = ?,
+                    certifications = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (
+                student.name,
+                student.year,
+                json.dumps(student.interests),
+                student.availability,
+                json.dumps(student.certifications) if student.certifications else None,
+                now,
+                student.id
+            ))
+            conn.commit()
+            return self.get_student(student.id)
+
     # Hospital account operations
     def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float) -> HospitalProfile:
         """Create a new hospital account."""
@@ -352,6 +378,13 @@ class DatabaseService:
             cursor.execute("SELECT * FROM positions WHERE id = ?", (position_id,))
             row = cursor.fetchone()
             return self._dict_to_position(row) if row else None
+
+    def delete_position(self, position_id: str) -> None:
+        """Delete a position by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM positions WHERE id = ?", (position_id,))
+            conn.commit()
 
     # Message operations
     def create_message(self, message: Message) -> Message:

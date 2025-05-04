@@ -1,0 +1,200 @@
+import streamlit as st
+from frontend.components.match_view import match_view
+from backend.services.data_service import DataService
+
+st.set_page_config(
+    page_title="Student Dashboard - studiPraxis",
+    page_icon="🔍"
+)
+
+# Check if user is logged in
+if 'student_id' in st.session_state and st.session_state.student_id:
+    data_service = DataService()
+    
+    # Get applied and saved positions
+    applied_matches = data_service.get_applied_positions_for_student(st.session_state.student_id)
+    saved_matches = data_service.get_saved_positions_for_student(st.session_state.student_id)
+    
+    # Get current student profile
+    student = data_service.get_student(st.session_state.student_id)
+    
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Alle Positionen", "Bewerbungen", "Gespeicherte Positionen", "Mein Profil", "Info"])
+    
+    with tab1:
+        st.markdown("### Alle Positionen")
+        match_view()
+    
+    with tab2:
+        st.markdown("### Meine Bewerbungen")
+        if not applied_matches:
+            st.info("Sie haben sich noch auf keine Positionen beworben.")
+        else:
+            for match in applied_matches:
+                position = data_service.get_position(match.position_id)
+                if position:
+                    hospital = data_service.get_hospital(position.hospital_id)
+                    if hospital:
+                        with st.expander(f"{position.title} - {hospital.name}"):
+                            st.markdown(f"**Abteilung:** {position.department}")
+                            st.markdown(f"**Standort:** {hospital.location}")
+                            st.markdown(f"**Dauer:** {position.duration}")
+                            if position.stipend:
+                                st.markdown(f"**Vergütung:** {position.stipend}€/Monat")
+                            st.markdown("**Beschreibung:**")
+                            st.markdown(position.description)
+                            st.markdown("**Anforderungen:**")
+                            for req in position.requirements:
+                                st.markdown(f"- {req}")
+    
+    with tab3:
+        st.markdown("### Gespeicherte Positionen")
+        if not saved_matches:
+            st.info("Sie haben noch keine Positionen gespeichert.")
+        else:
+            for match in saved_matches:
+                position = data_service.get_position(match.position_id)
+                if position:
+                    hospital = data_service.get_hospital(position.hospital_id)
+                    if hospital:
+                        with st.expander(f"{position.title} - {hospital.name}"):
+                            st.markdown(f"**Abteilung:** {position.department}")
+                            st.markdown(f"**Standort:** {hospital.location}")
+                            st.markdown(f"**Dauer:** {position.duration}")
+                            if position.stipend:
+                                st.markdown(f"**Vergütung:** {position.stipend}€/Monat")
+                            st.markdown("**Beschreibung:**")
+                            st.markdown(position.description)
+                            st.markdown("**Anforderungen:**")
+                            for req in position.requirements:
+                                st.markdown(f"- {req}")
+                            
+                            # Add apply button
+                            if st.button("Jetzt bewerben", key=f"apply_saved_{position.id}"):
+                                data_service.update_match_status(match.id, 'applied')
+                                st.success("Bewerbung erfolgreich eingereicht!")
+                                st.rerun()
+    
+    with tab4:
+        st.markdown("### Mein Profil")
+        if student:
+            logout_placeholder = st.empty()
+            if logout_placeholder.button("🚪 Logout", use_container_width=True):
+                if st.session_state.get("confirm_logout"):
+                    # Actually log out
+                    st.session_state.clear()
+                    st.switch_page("pages/9_Student_Login.py")
+                else:
+                    st.session_state.confirm_logout = True
+                    st.warning("Sind Sie sicher, dass Sie sich abmelden möchten? Klicken Sie erneut auf 'Logout' zum Bestätigen.")
+            else:
+                st.session_state.confirm_logout = False
+            st.markdown(f"# Medical Student - Year {student.year}")
+            st.markdown(f"**Name:** {student.name}")
+            st.markdown("**Interests:**")
+            for interest in student.interests:
+                st.markdown(f"- {interest}")
+            st.markdown("**Availability:**")
+            st.markdown(student.availability)
+            st.markdown("**Certifications:**")
+            if student.certifications:
+                for cert in student.certifications:
+                    st.markdown(f"- {cert}")
+            else:
+                st.markdown("Keine Zertifizierungen angegeben.")
+            # Edit profile form
+            with st.expander("Profil bearbeiten"):
+                with st.form("edit_profile_form"):
+                    new_name = st.text_input("Name", value=student.name)
+                    new_year = st.selectbox("Studienjahr", ["1", "2", "3", "4", "5", "6"], index=int(student.year)-1)
+                    from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
+                    new_interests = st.multiselect("Fachinteressen", options=MEDICAL_SPECIALTIES, default=student.interests)
+                    new_availability = st.text_input("Verfügbarkeit", value=student.availability)
+                    new_certifications = st.multiselect("Zertifizierungen", options=MEDICAL_CERTIFICATIONS, default=student.certifications if student.certifications else [])
+                    submitted = st.form_submit_button("Profil aktualisieren")
+                    if submitted:
+                        try:
+                            # Update student profile
+                            student.name = new_name
+                            student.year = int(new_year)
+                            student.interests = new_interests
+                            student.availability = new_availability
+                            student.certifications = new_certifications if new_certifications else None
+                            data_service.update_student(student)
+                            st.success("Profil erfolgreich aktualisiert!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
+        else:
+            st.error("Studentenprofil nicht gefunden.")
+    
+    with tab5:
+        st.markdown("""
+        <div style='margin-top:1em; margin-bottom:1em;'>
+        <h3 style='color:#1e8e5a;'>Was bedeutet es, Werkstudent zu sein?</h3>
+        <p>Werkstudent*innen sind Studierende, die neben ihrem Studium bei einem Arbeitgeber unter bestimmten Voraussetzungen beschäftigt sind. Die wichtigste Voraussetzung ist, dass dein Schwerpunkt auf deinem Studium bleibt. Dies wird sichergestellt, indem deine Arbeitszeit grundsätzlich auf <b>20 Stunden pro Woche</b> begrenzt ist.</p>
+        <p>Es gibt jedoch Ausnahmen, die wir weiter unten erklären.</p>
+        <h4>Welche Voraussetzungen musst du mitbringen?</h4>
+        <p>Die maximale Anzahl Semester in denen du als Werkstudent*in arbeiten darfst beträgt 25. Außerdem darfst du dich nicht in einem Urlaubssemester befinden.</p>
+        <h4>Wie ist die Arbeitszeit geregelt?</h4>
+        <p>Als Werkstudent*in gilt grundsätzlich ein wöchentliches Limit von 20 Arbeitsstunden.</p>
+        <p>Du darfst diese Grenze jedoch <b>in bis zu 26 Wochen pro Jahr überschreiten</b>, wenn:</p>
+        <ul>
+            <li>die Mehrarbeit abends, nachts, am Wochenende oder in den Semesterferien erfolgt,</li>
+            <li>der Zeitraum im Voraus bekannt ist,</li>
+            <li>und innerhalb eines Zeitjahres die 26-Wochen-Grenze eingehalten wird.</li>
+        </ul>
+        <h4>Warum ein Werkstudentenjob über Studipraxis?</h4>
+        <ol>
+            <li><b>Praxiserfahrung sammeln – Werde fit für deinen Berufsstart</b>
+                <ul>
+                    <li>Sicherer Umgang mit Patient*innen</li>
+                    <li>Basisfertigkeiten wie Blutabnahmen, Infusionen legen, Anamnesegespräche führen</li>
+                    <li>Assistenz im OP und bei Untersuchungen</li>
+                    <li>Mitarbeit im Stations- und Praxisbetrieb</li>
+                    <li>Verständnis für Teamabläufe in Kliniken und Praxen entwickeln</li>
+                </ul>
+                <p>Diese Erfahrungen geben dir Sicherheit im späteren Berufsleben und verschaffen dir einen klaren Vorteil bei Bewerbungen für Famulaturen, Hospitationen oder deine Assistenzarztstelle – und natürlich für dein PJ, falls dort keine zentrale Bewerbung erfolgt.</p>
+            </li>
+            <li><b>Geld verdienen – Studiere sorgenfreier</b>
+                <ul>
+                    <li>Faire Vergütung durch tarifnahe oder marktgerechte Stundenlöhne</li>
+                    <li>Flexible Arbeitszeiten, angepasst an dein Studium</li>
+                    <li>Keine Nebenjobs mehr außerhalb deines Fachgebiets</li>
+                    <li>Attraktiver Status für Arbeitgeber durch reduzierte Sozialabgaben</li>
+                </ul>
+                <p>Du arbeitest nicht nur sinnvoll nebenbei, sondern baust aktiv an deiner Zukunft.</p>
+            </li>
+            <li><b>Krankenversicherung – Sicher abgesichert</b>
+                <ul>
+                    <li><b>Unter 25 Jahre:</b> Möglichst weiterhin familienversichert, wenn dein Einkommen unter der Geringfügigkeitsgrenze (556 €/Monat, 2025) bleibt</li>
+                    <li><b>Über der Geringfügigkeitsgrenze:</b> Günstige werkstudentische Versicherung bei einer Krankenkasse deiner Wahl</li>
+                    <li>Reduzierte Abgaben: Keine Beiträge zur Kranken-, Pflege- oder Arbeitslosenversicherung, nur Rentenbeiträge</li>
+                    <li>Fester Beitragssatz: Dein Krankenkassenbeitrag bleibt unabhängig von deinem Einkommen konstant</li>
+                    <li>Freie Wahl zwischen gesetzlicher und (freiwilliger) privater Krankenversicherung</li>
+                    <li>Ab deinem 30. Lebensjahr darfst du zwar weiter als Werkstudent*in arbeiten, musst dich aber Eigenständig im Regeltarif krankenversichern</li>
+                </ul>
+                <p>So bist du auch finanziell bestens abgesichert – und kannst dich voll auf dein Studium konzentrieren.</p>
+            </li>
+            <li><b>Netzwerk aufbauen – Kontakte für deine medizinische Karriere</b>
+                <ul>
+                    <li>Knüpfe früh Kontakte zu Ärzt:innen, Praxisinhaber:innen und Klinikleitungen</li>
+                    <li>Sichere dir Empfehlungsschreiben und Kontakte für später</li>
+                    <li>Stärke dein berufliches Profil durch positive praktische Erfahrungen</li>
+                </ul>
+                <p>Ein gutes Netzwerk öffnet dir viele Wege für deine Karriere.</p>
+            </li>
+            <li><b>Spaß haben – Medizin erleben, bevor es richtig losgeht</b>
+                <ul>
+                    <li>Setze dein Wissen in der Praxis um</li>
+                    <li>Erlebe Teamarbeit und echte Erfolge im Alltag</li>
+                    <li>Motiviere dich durch Erfahrungen, die dich durch Prüfungszeiten tragen</li>
+                </ul>
+            </li>
+        </ol>
+        <p style='font-weight:bold; color:#1e8e5a;'>Medizin erleben statt nur lernen – das ist Studipraxis.</p>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.markdown("### Alle Positionen")
+    match_view() 

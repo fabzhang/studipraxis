@@ -29,6 +29,9 @@ class DataService:
             name, email, password, year, interests, availability, certifications
         )
 
+    def update_student(self, student: StudentProfile) -> StudentProfile:
+        return self.db_service.update_student(student)
+
     # Hospital account operations
     def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float) -> HospitalProfile:
         return self.db_service.create_hospital_account(name, email, password, location, latitude, longitude)
@@ -51,6 +54,9 @@ class DataService:
 
     def get_position(self, position_id: str) -> Optional[Position]:
         return self.db_service.get_position(position_id)
+
+    def delete_position(self, position_id: str) -> None:
+        return self.db_service.delete_position(position_id)
 
     # Message operations
     def create_message(self, message: Message) -> Message:

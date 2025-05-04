@@ -32,7 +32,15 @@ with col2:
 
 # Default landing page content
 st.markdown("""
-### Willkommen bei studiPraxis.de
-
-Wählen Sie oben aus, ob Sie Student*in oder Institution sind, um fortzufahren.
-""")
+<div style='margin-top:2em; margin-bottom:2em;'>
+    <h3 style='color:#1e8e5a;'>Warum Studipraxis?</h3>
+    <ul style='font-size:1.1rem; line-height:1.7;'>
+        <li><b>Schnell, unkompliziert und kostenlos</b> für Studierende</li>
+        <li><b>Zugang zu exklusiven Werkstudentenstellen</b> in der Medizin</li>
+        <li><b>Individuelle Suchoptionen</b> für deine Präferenzen</li>
+        <li>Auf Wunsch <b>proaktive Kontaktaufnahme</b> durch potentielle Arbeitgeber</li>
+        <li><b>Absolute Datenkontrolle:</b> Du entscheidest, wer dein Profil sieht</li>
+        <li><b>Flexible Jobs</b>, die wirklich zu deinem Studium und deinem Lebensstil passen</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
