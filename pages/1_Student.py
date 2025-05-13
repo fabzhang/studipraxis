@@ -51,7 +51,7 @@ st.markdown("""
     <li>✔ Wichtige Kontakte für deine Zukunft knüpfen</li>
     <li>✔ Werde ein Teammitglied echter medizinischer Teams</li>
 </ul>
-<p style='font-weight:bold; color:#1e8e5a;'>Dein Studium. Deine Karriere. Dein Job.</p>
+<p style='font-weight:bold; color:#15396b;'>Dein Studium. Deine Karriere. Dein Job.</p>
 </div>
 """, unsafe_allow_html=True)
 if st.button("Mehr Informationen", key="info_btn_student"):

@@ -1,11 +1,51 @@
 import streamlit as st
 from frontend.components.match_view import match_view
 from backend.services.data_service import DataService
+from form_options import INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
+from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
 
 st.set_page_config(
     page_title="Student Dashboard - studiPraxis",
     page_icon="🔍"
 )
+
+# Compatibility helpers for old data formats
+def get_year_index(year_value):
+    """Handle both string and integer year values for backward compatibility"""
+    if isinstance(year_value, int):
+        # Map old numeric years (1-6) to positions in the new STUDY_YEAR_OPTIONS
+        # This is an approximation - adjust the mapping as needed
+        year_mapping = {
+            1: 0,  # "Vorklinik - 1. Jahr"
+            2: 1,  # "Vorklinik - 2. Jahr"
+            3: 2,  # "Klinik - 3. Jahr"
+            4: 3,  # "Klinik - 4. Jahr"
+            5: 4,  # "Klinik - 5. Jahr"
+            6: 5,  # "Praktisches Jahr (PJ)"
+        }
+        return year_mapping.get(year_value, 0)
+    elif year_value in STUDY_YEAR_OPTIONS:
+        return STUDY_YEAR_OPTIONS.index(year_value)
+    return 0
+
+def get_compatible_defaults(old_values, new_options):
+    """Return only the values that exist in the new options list"""
+    if not old_values:
+        return []
+    # Create a set of lowercase option values for case-insensitive matching
+    lowercase_options = {opt.lower(): opt for opt in new_options}
+    result = []
+    
+    for val in old_values:
+        # Direct match
+        if val in new_options:
+            result.append(val)
+        # Case-insensitive match
+        elif val.lower() in lowercase_options:
+            result.append(lowercase_options[val.lower()])
+        # Skip values that don't exist in new options
+    
+    return result
 
 # Check if user is logged in
 if 'student_id' in st.session_state and st.session_state.student_id:
@@ -89,7 +129,22 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                     st.warning("Sind Sie sicher, dass Sie sich abmelden möchten? Klicken Sie erneut auf 'Logout' zum Bestätigen.")
             else:
                 st.session_state.confirm_logout = False
-            st.markdown(f"# Medical Student - Year {student.year}")
+                
+            # Display the year properly, handling both string and int formats
+            display_year = student.year
+            if isinstance(student.year, int) and 1 <= student.year <= 6:
+                # Map old numeric years to appropriate display text
+                year_map = {
+                    1: "Vorklinik - 1. Jahr",
+                    2: "Vorklinik - 2. Jahr",
+                    3: "Klinik - 3. Jahr",
+                    4: "Klinik - 4. Jahr",
+                    5: "Klinik - 5. Jahr",
+                    6: "Praktisches Jahr (PJ)"
+                }
+                display_year = year_map.get(student.year, f"Jahr {student.year}")
+                
+            st.markdown(f"# Medical Student - {display_year}")
             st.markdown(f"**Name:** {student.name}")
             st.markdown("**Interests:**")
             for interest in student.interests:
@@ -106,17 +161,48 @@ if 'student_id' in st.session_state and st.session_state.student_id:
             with st.expander("Profil bearbeiten"):
                 with st.form("edit_profile_form"):
                     new_name = st.text_input("Name", value=student.name)
-                    new_year = st.selectbox("Studienjahr", ["1", "2", "3", "4", "5", "6"], index=int(student.year)-1)
-                    from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
-                    new_interests = st.multiselect("Fachinteressen", options=MEDICAL_SPECIALTIES, default=student.interests)
+                    
+                    # Handle year selection, with backward compatibility
+                    year_index = get_year_index(student.year)
+                    new_year = st.selectbox("Studienjahr", STUDY_YEAR_OPTIONS, index=year_index)
+                    
+                    # Filter interests for compatibility with new options
+                    compatible_interests = get_compatible_defaults(student.interests, INTEREST_FIELDS)
+                    
+                    # For older profiles, also show the old options as a fallback
+                    if len(compatible_interests) < len(student.interests):
+                        st.warning("Einige Ihrer alten Fachinteressen entsprechen nicht den neuen Optionen. " 
+                                 "Bitte wählen Sie neue Optionen aus der Liste.")
+                    
+                    new_interests = st.multiselect(
+                        "Fachinteressen", 
+                        options=INTEREST_FIELDS, 
+                        default=compatible_interests
+                    )
+                    
                     new_availability = st.text_input("Verfügbarkeit", value=student.availability)
-                    new_certifications = st.multiselect("Zertifizierungen", options=MEDICAL_CERTIFICATIONS, default=student.certifications if student.certifications else [])
+                    
+                    # Filter certifications for compatibility with new options
+                    compatible_certs = get_compatible_defaults(student.certifications, PRAXIS_SKILLS)
+                    
+                    # Show warning if there are incompatible certifications
+                    if student.certifications and len(compatible_certs) < len(student.certifications):
+                        st.warning("Einige Ihrer alten Zertifizierungen entsprechen nicht den neuen Optionen. "
+                                 "Bitte wählen Sie neue Optionen aus der Liste.")
+                    
+                    new_certifications = st.multiselect(
+                        "Praxis-Skills/Zertifizierungen", 
+                        options=PRAXIS_SKILLS, 
+                        default=compatible_certs
+                    )
+                    
                     submitted = st.form_submit_button("Profil aktualisieren")
                     if submitted:
                         try:
                             # Update student profile
                             student.name = new_name
-                            student.year = int(new_year)
+                            # Always store as string format now
+                            student.year = new_year
                             student.interests = new_interests
                             student.availability = new_availability
                             student.certifications = new_certifications if new_certifications else None
@@ -131,7 +217,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
     with tab5:
         st.markdown("""
         <div style='margin-top:1em; margin-bottom:1em;'>
-        <h3 style='color:#1e8e5a;'>Was bedeutet es, Werkstudent zu sein?</h3>
+        <h3 style='color:#15396b;'>Was bedeutet es, Werkstudent zu sein?</h3>
         <p>Werkstudent*innen sind Studierende, die neben ihrem Studium bei einem Arbeitgeber unter bestimmten Voraussetzungen beschäftigt sind. Die wichtigste Voraussetzung ist, dass dein Schwerpunkt auf deinem Studium bleibt. Dies wird sichergestellt, indem deine Arbeitszeit grundsätzlich auf <b>20 Stunden pro Woche</b> begrenzt ist.</p>
         <p>Es gibt jedoch Ausnahmen, die wir weiter unten erklären.</p>
         <h4>Welche Voraussetzungen musst du mitbringen?</h4>
@@ -192,7 +278,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                 </ul>
             </li>
         </ol>
-        <p style='font-weight:bold; color:#1e8e5a;'>Medizin erleben statt nur lernen – das ist Studipraxis.</p>
+        <p style='font-weight:bold; color:#15396b;'>Medizin erleben statt nur lernen – das ist Studipraxis.</p>
         </div>
         """, unsafe_allow_html=True)
 else:

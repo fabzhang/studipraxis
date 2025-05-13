@@ -1,6 +1,6 @@
 import streamlit as st
 from backend.services.data_service import DataService
-from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
+from form_options import LANGUAGE_OPTIONS, UNIVERSITY_OPTIONS, INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
 
 st.set_page_config(
     page_title="Student Login - studiPraxis",
@@ -41,26 +41,38 @@ def register():
         email = st.text_input("E-Mail")
         password = st.text_input("Passwort", type="password")
         confirm_password = st.text_input("Passwort bestätigen", type="password")
-        year = st.selectbox("Studienjahr", ["1", "2", "3", "4", "5", "6"])
+        year = st.selectbox("Studienjahr", STUDY_YEAR_OPTIONS)
         
+        # Language selection
+        language = st.multiselect(
+            "Sprachen",
+            options=LANGUAGE_OPTIONS,
+            help="Wählen Sie die Sprachen, die Sie sprechen."
+        )
+        # University selection
+        university = st.selectbox(
+            "Universität",
+            options=[u["name"] for u in UNIVERSITY_OPTIONS],
+            help="Wählen Sie Ihre Universität."
+        )
         # Use multiselect for specialty interests
         st.markdown("#### Fachinteressen")
         st.info("Wählen Sie Ihre Fachinteressen aus der Liste aus. Sie können mehrere auswählen.")
         interests = st.multiselect(
             "Fachinteressen",
-            options=MEDICAL_SPECIALTIES,
+            options=INTEREST_FIELDS,
             help="Wählen Sie die Fachgebiete, die Sie interessieren."
         )
         
         availability = st.text_input("Verfügbarkeit (z.B. Sommer 2025)")
         
-        # Use multiselect for certifications
-        st.markdown("#### Zertifizierungen")
-        st.info("Wählen Sie Ihre Zertifizierungen aus der Liste aus. Sie können mehrere auswählen.")
+        # Use multiselect for certifications/skills
+        st.markdown("#### Praxis-Skills/Zertifizierungen")
+        st.info("Wählen Sie Ihre Praxis-Skills und Zertifizierungen aus der Liste aus. Sie können mehrere auswählen.")
         certifications = st.multiselect(
-            "Zertifizierungen",
-            options=MEDICAL_CERTIFICATIONS,
-            help="Wählen Sie die Zertifizierungen, die Sie besitzen."
+            "Praxis-Skills/Zertifizierungen",
+            options=PRAXIS_SKILLS,
+            help="Wählen Sie die Skills/Zertifizierungen, die Sie besitzen."
         )
         
         submitted = st.form_submit_button("Registrieren")
@@ -74,6 +86,8 @@ def register():
                 "email": email,
                 "password": password,
                 "year": year,
+                "language": language,
+                "university": university,
                 "interests": interests,
                 "availability": availability,
                 "certifications": certifications
@@ -86,12 +100,14 @@ def register():
         st.markdown("---")
         st.markdown(f"# Medical Student - Year {st.session_state.new_student['year']}")
         st.markdown(f"**Name:** {st.session_state.new_student['name']}")
-        st.markdown("**Interests:**")
+        st.markdown(f"**Universität:** {st.session_state.new_student['university']}")
+        st.markdown(f"**Sprachen:** {', '.join(st.session_state.new_student['language']) if st.session_state.new_student['language'] else 'Keine Angabe'}")
+        st.markdown("**Fachinteressen:**")
         for interest in st.session_state.new_student['interests']:
             st.markdown(f"- {interest}")
         st.markdown("**Availability:**")
         st.markdown(st.session_state.new_student['availability'])
-        st.markdown("**Certifications:**")
+        st.markdown("**Praxis-Skills/Zertifizierungen:**")
         for cert in st.session_state.new_student['certifications']:
             st.markdown(f"- {cert}")
         col1, col2 = st.columns(2)
@@ -103,7 +119,7 @@ def register():
                         name=st.session_state.new_student['name'],
                         email=st.session_state.new_student['email'],
                         password=st.session_state.new_student['password'],
-                        year=int(st.session_state.new_student['year']),
+                        year=st.session_state.new_student['year'],
                         interests=st.session_state.new_student['interests'],
                         availability=st.session_state.new_student['availability'],
                         certifications=st.session_state.new_student['certifications'] if st.session_state.new_student['certifications'] else None

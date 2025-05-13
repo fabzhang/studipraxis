@@ -4,7 +4,7 @@ body {
 }
 
 h1, h2, h3 {
-    color: #197c4d;  /* A soft green tone */
+    color: #15396b;  /* Changed to dark blue */
 }
 
 .block-container {
@@ -12,7 +12,7 @@ h1, h2, h3 {
 }
 
 .stButton > button {
-    background-color: #1e8e5a !important;
+    background-color: #15396b !important;
     color: white !important;
     border-radius: 8px;
     padding: 0.5em 1em;
@@ -21,7 +21,7 @@ h1, h2, h3 {
 }
 
 .stButton > button:hover {
-    background-color: #166c42 !important;
+    background-color: #10294d !important;
 }
 
 /* Style for form elements */
@@ -41,8 +41,8 @@ h1, h2, h3 {
 
 /* Style for select box when focused */
 .stSelectbox > div > div > div:focus-within {
-    border-color: #1e8e5a !important;
-    box-shadow: 0 0 0 1px #1e8e5a !important;
+    border-color: #15396b !important;
+    box-shadow: 0 0 0 1px #15396b !important;
 }
 
 /* Style for the title container */

@@ -14,7 +14,7 @@ logo = Image.open("studipraxis_logo.png")
 # Center-aligned header
 st.markdown("""
 <div style='text-align: center;'>
-    <h1 style='color: #1e8e5a;'>studiPraxis.de</h1>
+    <h1 style='color: #15396b;'>studiPraxis.de</h1>
     <p style='font-size: 1.2rem;'>Praxiserfahrung. Einfach vermittelt.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -33,7 +33,7 @@ with col2:
 # Default landing page content
 st.markdown("""
 <div style='margin-top:2em; margin-bottom:2em;'>
-    <h3 style='color:#1e8e5a;'>Warum Studipraxis?</h3>
+    <h3 style='color:#15396b;'>Warum Studipraxis?</h3>
     <ul style='font-size:1.1rem; line-height:1.7;'>
         <li><b>Schnell, unkompliziert und kostenlos</b> für Studierende</li>
         <li><b>Zugang zu exklusiven Werkstudentenstellen</b> in der Medizin</li>

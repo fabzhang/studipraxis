@@ -248,10 +248,10 @@ with tab3:
 with tab4:
     st.markdown("""
     <div style='margin-top:1em; margin-bottom:1em;'>
-    <h2 style='color:#1e8e5a; margin-bottom:0.5em;'>Finden Sie motivierte Medizinstudierende für Ihre Praxis oder Klinik – schnell, flexibel und zuverlässig.</h2>
+    <h2 style='color:#15396b; margin-bottom:0.5em;'>Finden Sie motivierte Medizinstudierende für Ihre Praxis oder Klinik – schnell, flexibel und zuverlässig.</h2>
     <p>Studipraxis bringt Ihnen engagierte Werkstudent:innen ins Team – mit medizinischem Hintergrund, Interesse an praktischer Arbeit und viel Lernbereitschaft.</p>
     </div>
-    """, unsafe_allow_html=True)
+    """)
     st.markdown("**[Jetzt kostenlos registrieren und ein Stellenangebot aufgeben]**")
 
     st.markdown("""

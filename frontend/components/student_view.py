@@ -13,9 +13,32 @@ def student_view():
         st.info("No student profiles available yet.")
         return
     
-    # Filter by study year
-    years = sorted(set(s.year for s in students))
-    selected_year = st.selectbox("Filter by Study Year", ["All"] + [str(y) for y in years])
+    # Handle conversion for sorting to prevent type comparison errors
+    def get_year_for_sorting(student):
+        """Convert year to sortable value, handling both string and int formats"""
+        year = student.year
+        if isinstance(year, int):
+            return year
+        elif isinstance(year, str):
+            # For string years like "Vorklinik - 1. Jahr", extract numeric part
+            # This is a simple approach, might need refinement
+            for part in year.split():
+                if part.isdigit():
+                    return int(part)
+            # If no numeric part found, put at the end of the sort
+            return 999
+        return 0
+
+    # Filter by study year safely
+    years_set = set()
+    for student in students:
+        if isinstance(student.year, int):
+            years_set.add(str(student.year))
+        else:
+            years_set.add(student.year)
+    
+    years = sorted(years_set, key=lambda y: int(y) if y.isdigit() else 999)  # Sort numerically if possible
+    selected_year = st.selectbox("Filter by Study Year", ["All"] + years)
     
     # Filter by interests
     all_interests = set()
@@ -27,12 +50,30 @@ def student_view():
     # Display filtered students
     for student in students:
         # Apply filters
-        if selected_year != "All" and student.year != int(selected_year):
-            continue
+        if selected_year != "All":
+            # Handle both string and int year formats
+            student_year = str(student.year) if isinstance(student.year, int) else student.year
+            if student_year != selected_year:
+                continue
+                
         if selected_interest != "All" and selected_interest not in student.interests:
             continue
         
-        st.subheader(f"Medical Student - Year {student.year}")
+        # Display student year in a consistent format
+        display_year = student.year
+        if isinstance(student.year, int) and 1 <= student.year <= 6:
+            # Map old numeric years to appropriate display text
+            year_map = {
+                1: "Vorklinik - 1. Jahr",
+                2: "Vorklinik - 2. Jahr",
+                3: "Klinik - 3. Jahr",
+                4: "Klinik - 4. Jahr",
+                5: "Klinik - 5. Jahr",
+                6: "Praktisches Jahr (PJ)"
+            }
+            display_year = year_map.get(student.year, f"Jahr {student.year}")
+        
+        st.subheader(f"Medical Student - {display_year}")
         st.markdown(f"**Name:** {student.name}")
         
         if student.interests:
