@@ -1,4 +1,5 @@
 import streamlit as st
+from frontend.components.footer import footer
 
 st.set_page_config(
     page_title="Student - studiPraxis",
@@ -55,4 +56,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 if st.button("Mehr Informationen", key="info_btn_student"):
-    st.switch_page("pages/3_Student_Dashboard.py") 
+    st.switch_page("pages/10_Student_Info.py")
+
+# Add footer at the bottom
+footer() 

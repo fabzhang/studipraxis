@@ -3,6 +3,7 @@ from backend.services.data_service import DataService
 from shared.types import Position
 from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
 from datetime import datetime
+from shared.utils import generate_mailto_link
 
 st.set_page_config(
     page_title="Klinik Dashboard - studiPraxis",
@@ -197,10 +198,20 @@ with tab2:
                         # Application actions
                         col1, col2 = st.columns(2)
                         with col1:
-                            if st.button("Annehmen", key=f"accept_{application.id}"):
-                                data_service.update_match_status(application.id, 'accepted')
-                                st.success("Bewerbung angenommen!")
-                                st.rerun()
+                            # Generate mailto link for contacting the student
+                            subject = f"Bewerbung bei {hospital.name} - {position.title}"
+                            body = f"""Hallo {student.name},
+
+vielen Dank für Ihr Interesse an der Position "{position.title}" in unserer Einrichtung.
+
+Wir würden uns freuen, mit Ihnen in Kontakt zu treten und mehr über Ihre Erfahrungen und Motivation zu erfahren.
+
+Mit freundlichen Grüßen
+{hospital.name}"""
+                            
+                            mailto_link = generate_mailto_link(student.email, subject, body)
+                            if st.button("📧 Kontakt aufnehmen", key=f"contact_{application.id}"):
+                                st.markdown(f'<a href="{mailto_link}" target="_blank">E-Mail öffnen</a>', unsafe_allow_html=True)
                         with col2:
                             if st.button("Ablehnen", key=f"reject_{application.id}"):
                                 data_service.update_match_status(application.id, 'rejected')
@@ -246,12 +257,7 @@ with tab3:
                     st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
 
 with tab4:
-    st.markdown("""
-    <div style='margin-top:1em; margin-bottom:1em;'>
-    <h2 style='color:#15396b; margin-bottom:0.5em;'>Finden Sie motivierte Medizinstudierende für Ihre Praxis oder Klinik – schnell, flexibel und zuverlässig.</h2>
-    <p>Studipraxis bringt Ihnen engagierte Werkstudent:innen ins Team – mit medizinischem Hintergrund, Interesse an praktischer Arbeit und viel Lernbereitschaft.</p>
-    </div>
-    """)
+
     st.markdown("**[Jetzt kostenlos registrieren und ein Stellenangebot aufgeben]**")
 
     st.markdown("""

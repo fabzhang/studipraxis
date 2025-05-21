@@ -1,4 +1,5 @@
 import streamlit as st
+from frontend.components.footer import footer
 
 st.set_page_config(
     page_title="Für Institutionen - studiPraxis",
@@ -47,4 +48,7 @@ Egal ob Praxis, Klinik oder MVZ – unsere Studierenden möchten Erfahrung samme
 **Jetzt registrieren und die Vorteile sichern!**
 """)
 if st.button("Mehr Informationen anzeigen", key="info_btn_hospital"):
-    st.switch_page("pages/8_Hospital_Dashboard.py") 
+    st.switch_page("pages/11_Institution_Info.py")
+
+# Add footer at the bottom
+footer() 

@@ -3,6 +3,7 @@ from frontend.components.match_view import match_view
 from backend.services.data_service import DataService
 from form_options import INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
 from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
+from frontend.components.footer import footer
 
 st.set_page_config(
     page_title="Student Dashboard - studiPraxis",
@@ -283,4 +284,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
         """, unsafe_allow_html=True)
 else:
     st.markdown("### Alle Positionen")
-    match_view() 
+    match_view()
+
+# Add footer at the bottom
+footer() 
