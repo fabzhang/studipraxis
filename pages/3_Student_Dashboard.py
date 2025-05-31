@@ -91,6 +91,19 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                                     st.markdown(f"💰 {position.stipend}")
                                 else:
                                     st.markdown(f"💰 {position.stipend}€/Stunde")
+                            
+                            # Add action buttons
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Bewerbung zurückziehen", key=f"unapply_{match.id}"):
+                                    data_service.update_match_status(match.id, 'saved')
+                                    st.success("Bewerbung zurückgezogen!")
+                                    st.rerun()
+                            with col2:
+                                if st.button("Position speichern", key=f"save_from_applied_{match.id}"):
+                                    data_service.update_match_status(match.id, 'saved')
+                                    st.success("Position erfolgreich gespeichert!")
+                                    st.rerun()
     
     with tab3:
         st.markdown("### Gespeicherte Positionen")
@@ -114,11 +127,18 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                                 else:
                                     st.markdown(f"💰 {position.stipend}€/Stunde")
                             
-                            # Add apply button
-                            if st.button("Jetzt bewerben", key=f"apply_saved_{position.id}"):
-                                data_service.update_match_status(match.id, 'applied')
-                                st.success("Bewerbung erfolgreich eingereicht!")
-                                st.rerun()
+                            # Add action buttons
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Jetzt bewerben", key=f"apply_saved_{match.id}"):
+                                    data_service.update_match_status(match.id, 'applied')
+                                    st.success("Bewerbung erfolgreich eingereicht!")
+                                    st.rerun()
+                            with col2:
+                                if st.button("Aus gespeicherten entfernen", key=f"unsave_{match.id}"):
+                                    data_service.delete_match(match.id)
+                                    st.success("Position aus gespeicherten entfernt!")
+                                    st.rerun()
     
     with tab4:
         st.markdown("### Mein Profil")

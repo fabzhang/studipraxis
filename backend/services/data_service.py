@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 import uuid
+import json
 
 from shared.types import StudentProfile, HospitalProfile, Message, Match, Position
 from backend.services.database import DatabaseService
@@ -47,7 +48,12 @@ class DataService:
 
     # Position operations
     def create_position(self, position: Position) -> Position:
+        """Create a new position."""
         return self.db_service.create_position(position)
+
+    def update_position(self, position: Position) -> Position:
+        """Update an existing position."""
+        return self.db_service.update_position(position)
 
     def get_positions(self, hospital_id: Optional[str] = None) -> List[Position]:
         return self.db_service.get_positions(hospital_id)
@@ -56,6 +62,7 @@ class DataService:
         return self.db_service.get_position(position_id)
 
     def delete_position(self, position_id: str) -> None:
+        """Delete a position."""
         return self.db_service.delete_position(position_id)
 
     # Message operations
@@ -85,4 +92,8 @@ class DataService:
         return self.db_service.get_saved_positions_for_student(student_id)
 
     def get_applied_positions_for_student(self, student_id: str) -> List[Match]:
-        return self.db_service.get_applied_positions_for_student(student_id) 
+        return self.db_service.get_applied_positions_for_student(student_id)
+
+    def delete_match(self, match_id: str) -> None:
+        """Delete a match by ID."""
+        return self.db_service.delete_match(match_id) 

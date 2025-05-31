@@ -5,6 +5,11 @@ from streamlit_folium import folium_static
 from backend.services.data_service import DataService
 from shared.types import HospitalProfile, Position, Match
 from datetime import datetime
+from form_options import INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
+import uuid
+
+# Toggle for additional filters
+SHOW_ADDITIONAL_FILTERS = False  # Set to True to show year and requirements filters
 
 def create_map(hospitals, positions, selected_department="Alle Abteilungen"):
     # Create a map centered on Hamburg
@@ -16,7 +21,7 @@ def create_map(hospitals, positions, selected_department="Alle Abteilungen"):
         hospital_positions = [p for p in positions if p.hospital_id == hospital.id]
         
         # Filter by department if selected
-        if selected_department != "Alle Abteilungen":
+        if selected_department != "All":
             hospital_positions = [p for p in hospital_positions if p.department == selected_department]
         
         if not hospital_positions:
@@ -42,6 +47,7 @@ def create_map(hospitals, positions, selected_department="Alle Abteilungen"):
     return m
 
 def match_view():
+    """Display available positions with filtering options."""
     st.header("🔍 Browse Assistantship Positions")
     
     # Check if user is logged in
@@ -52,172 +58,144 @@ def match_view():
     if st.button("🔄 Aktualisieren"):
         st.rerun()
     
-    # Get all hospitals and positions
     data_service = DataService()
-    hospitals = data_service.get_hospitals()
     positions = data_service.get_positions()
     
     if not positions:
-        st.info("Keine Positionen verfügbar.")
+        st.info("No positions available yet.")
         return
     
-    # Create two columns: map and filter
-    col1, col2 = st.columns([2, 1])
+    # Filter by department - use all INTEREST_FIELDS options
+    selected_department = st.selectbox(
+        "Filter by Department",
+        ["All"] + INTEREST_FIELDS,
+        help="Filter positions by department"
+    )
     
-    with col2:
-        # Department filter
-        departments = sorted(set(p.department for p in positions if p.department))
-        selected_department = st.selectbox(
-            "Nach Abteilung filtern",
-            ["Alle Abteilungen"] + departments,
-            key="department_filter"
+    # Additional filters (only shown if SHOW_ADDITIONAL_FILTERS is True)
+    selected_year = "All"
+    selected_requirements = []
+    if SHOW_ADDITIONAL_FILTERS:
+        # Filter by minimum year - use all STUDY_YEAR_OPTIONS
+        selected_year = st.selectbox(
+            "Filter by Minimum Year",
+            ["All"] + STUDY_YEAR_OPTIONS,
+            help="Filter positions by minimum study year required"
+        )
+        
+        # Filter by requirements - use all PRAXIS_SKILLS options
+        selected_requirements = st.multiselect(
+            "Filter by Requirements",
+            options=PRAXIS_SKILLS,
+            help="Filter positions by required skills/certifications"
         )
     
-    with col1:
-        # Create and display the interactive map
-        m = create_map(hospitals, positions, selected_department)
-        folium_static(m)
-        
-        # Add legend or help text
-        st.markdown("""
-        💡 **Karten-Tipps:**
-        - Klicken Sie auf die Marker für Details
-        - Hovern Sie über die Marker für eine Schnellübersicht
-        - Nutzen Sie +/- zum Zoomen
-        """)
-
-    # Display all positions with a cleaner layout
+    # Create and display the interactive map
+    m = create_map(data_service.get_hospitals(), positions, selected_department)
+    folium_static(m)
+    
+    # Add legend or help text
+    st.markdown("""
+    💡 **Karten-Tipps:**
+    - Klicken Sie auf die Marker für Details
+    - Hoven Sie über die Marker für eine Schnellübersicht
+    - Nutzen Sie +/- zum Zoomen
+    """)
+    
+    # Display positions
     st.markdown("### Verfügbare Positionen")
-
-    # Create a grid layout for positions
     for position in positions:
-        if selected_department != "Alle Abteilungen" and position.department != selected_department:
+        # Apply filters
+        if selected_department != "All" and position.department != selected_department:
             continue
-
+        
+        if SHOW_ADDITIONAL_FILTERS:
+            if selected_year != "All" and STUDY_YEAR_OPTIONS.index(position.min_year) > STUDY_YEAR_OPTIONS.index(selected_year):
+                continue
+            
+            if selected_requirements and not all(req in position.requirements for req in selected_requirements):
+                continue
+        
         # Get hospital info
-        hospital = next((h for h in hospitals if h.id == position.hospital_id), None)
+        hospital = data_service.get_hospital(position.hospital_id)
         if not hospital:
             continue
-
-        # Create a container for each position
-        with st.container():
-            # Use columns for the condensed view
-            col1, col2, col3 = st.columns([3, 2, 1])
+        
+        # Create expander for position details
+        with st.expander(f"{position.title} - {hospital.name}"):
+            st.markdown(f"**Hospital:** {hospital.name}")
+            st.markdown(f"**Department:** {position.department}")
+            st.markdown(f"**Location:** {hospital.location}")
+            st.markdown(f"**Description:** {position.description}")
+            st.markdown(f"**Requirements:** {', '.join(position.requirements)}")
+            st.markdown(f"**Minimum Year:** {position.min_year}")
             
-            with col1:
-                st.markdown(f"### {position.title}")
-                st.markdown(f"🏥 {hospital.name}")
+            # Display stipend based on format
+            if position.stipend:
+                if position.stipend == "Bezahlung nach Tarifvertrag":
+                    st.markdown(f"💰 {position.stipend}")
+                else:
+                    st.markdown(f"💰 {position.stipend}€/Stunde")
             
-            with col2:
-                st.markdown(f"**Abteilung:** {position.department}")
-            
-            with col3:
-                if position.stipend:
-                    if position.stipend == "Bezahlung nach Tarifvertrag":
-                        st.markdown(f"💰 {position.stipend}")
+            # Add save/apply buttons if user is logged in as student
+            if 'student_id' in st.session_state and st.session_state.student_id:
+                # Check if position is already saved or applied
+                existing_match = data_service.get_match_by_student_and_position(
+                    st.session_state.student_id,
+                    position.id
+                )
+                
+                # Create two columns for the buttons
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if existing_match and existing_match.status == 'applied':
+                        st.success("✅ Bewerbung eingereicht")
+                        if st.button("Bewerbung zurückziehen", key=f"unapply_{position.id}"):
+                            data_service.update_match_status(existing_match.id, 'saved')
+                            st.success("Bewerbung zurückgezogen!")
+                            st.rerun()
                     else:
-                        st.markdown(f"💰 {position.stipend}€/Stunde")
-
-            # Expandable details section
-            with st.expander("Mehr Details anzeigen"):
-                st.markdown("#### Position Details")
-                
-                # Create two columns for details
-                detail_col1, detail_col2 = st.columns(2)
-                
-                with detail_col1:
-                    st.markdown("##### Standort")
-                    st.markdown(f"📍 {hospital.location}")
-                    
-                    st.markdown("##### Beschreibung")
-                    st.markdown(position.description)
-                
-                with detail_col2:
-                    st.markdown("##### Anforderungen")
-                    for req in position.requirements:
-                        st.markdown(f"✓ {req}")
-                    
-                    if position.stipend:
-                        st.markdown("##### Vergütung")
-                        if position.stipend == "Bezahlung nach Tarifvertrag":
-                            st.markdown(f"💰 {position.stipend}")
-                        else:
-                            st.markdown(f"💰 {position.stipend}€/Stunde")
-                
-                # Action buttons
-                if 'student_id' in st.session_state and st.session_state.student_id:
-                    # Check if student has already applied or saved this position
-                    student_id = st.session_state.student_id
-                    existing_match = data_service.get_match_by_student_and_position(student_id, position.id)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if existing_match and existing_match.status == 'applied':
-                            st.success("✓ Bewerbung eingereicht")
-                        elif existing_match and existing_match.status == 'saved':
-                            if st.button("Jetzt bewerben", key=f"apply_{position.id}"):
+                        if st.button("Jetzt bewerben", key=f"apply_{position.id}"):
+                            if existing_match:
+                                # Update existing match to applied
                                 data_service.update_match_status(existing_match.id, 'applied')
-                                st.success("Bewerbung erfolgreich eingereicht!")
-                                st.rerun()
-                        else:
-                            if st.button("Jetzt bewerben", key=f"apply_{position.id}"):
-                                match = Match(
-                                    id="",  # Will be generated by service
-                                    student_id=student_id,
+                            else:
+                                # Create new match as applied
+                                new_match = Match(
+                                    id=str(uuid.uuid4()),
+                                    student_id=st.session_state.student_id,
                                     position_id=position.id,
                                     status='applied',
                                     created_at=datetime.now(),
                                     updated_at=datetime.now()
                                 )
-                                data_service.create_match(match)
-                                st.success("Bewerbung erfolgreich eingereicht!")
-                                st.rerun()
-                    
-                    with col2:
-                        if existing_match and existing_match.status == 'saved':
-                            st.success("✓ Position gespeichert")
-                        elif existing_match and existing_match.status == 'applied':
-                            if st.button("Position speichern", key=f"save_{position.id}"):
+                                data_service.create_match(new_match)
+                            st.success("Bewerbung erfolgreich eingereicht!")
+                            st.rerun()
+                
+                with col2:
+                    if existing_match and existing_match.status == 'saved':
+                        st.success("💾 Position gespeichert")
+                        if st.button("Aus gespeicherten entfernen", key=f"unsave_{position.id}"):
+                            data_service.delete_match(existing_match.id)
+                            st.success("Position aus gespeicherten entfernt!")
+                            st.rerun()
+                    else:
+                        if st.button("Position speichern", key=f"save_{position.id}"):
+                            if existing_match:
+                                # Update existing match to saved
                                 data_service.update_match_status(existing_match.id, 'saved')
-                                st.success("Position erfolgreich gespeichert!")
-                                st.rerun()
-                        else:
-                            if st.button("Position speichern", key=f"save_{position.id}"):
-                                match = Match(
-                                    id="",  # Will be generated by service
-                                    student_id=student_id,
+                            else:
+                                # Create new match as saved
+                                new_match = Match(
+                                    id=str(uuid.uuid4()),
+                                    student_id=st.session_state.student_id,
                                     position_id=position.id,
                                     status='saved',
                                     created_at=datetime.now(),
                                     updated_at=datetime.now()
                                 )
-                                data_service.create_match(match)
-                                st.success("Position erfolgreich gespeichert!")
-                                st.rerun()
-
-            # Add a subtle divider between positions
-            st.markdown("---")
-
-    # Add some spacing at the bottom
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Display all positions below the map
-    st.markdown("### Alle Positionen")
-    for position in positions:
-        if selected_department != "Alle Abteilungen" and position.department != selected_department:
-            continue
-
-        # Get hospital info
-        hospital = next((h for h in hospitals if h.id == position.hospital_id), None)
-        if not hospital:
-            continue
-
-        st.subheader(position.title)
-        st.markdown(f"**Hospital:** {hospital.name}")
-        st.markdown(f"**Department:** {position.department}")
-        st.markdown(f"**Location:** {hospital.location}")
-        st.markdown(f"**Description:** {position.description}")
-        st.markdown(f"**Requirements:** {', '.join(position.requirements)}")
-        if position.stipend:
-            st.markdown(f"💰 **Stipend:** {position.stipend}")
-        st.markdown("---") 
+                                data_service.create_match(new_match)
+                            st.success("Position erfolgreich gespeichert!")
+                            st.rerun() 

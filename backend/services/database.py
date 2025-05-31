@@ -379,6 +379,36 @@ class DatabaseService:
             row = cursor.fetchone()
             return self._dict_to_position(row) if row else None
 
+    def update_position(self, position: Position) -> Position:
+        """Update an existing position."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            
+            cursor.execute("""
+                UPDATE positions SET
+                    department = ?,
+                    title = ?,
+                    description = ?,
+                    requirements = ?,
+                    min_year = ?,
+                    stipend = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (
+                position.department,
+                position.title,
+                position.description,
+                json.dumps(position.requirements),
+                position.min_year,
+                position.stipend,
+                now,
+                position.id
+            ))
+            
+            conn.commit()
+            return self.get_position(position.id)
+
     def delete_position(self, position_id: str) -> None:
         """Delete a position by ID."""
         with sqlite3.connect(self.db_path) as conn:
@@ -528,4 +558,11 @@ class DatabaseService:
                 WHERE student_id = ? AND status = 'applied'
                 ORDER BY created_at DESC
             """, (student_id,))
-            return [self._dict_to_match(row) for row in cursor.fetchall()] 
+            return [self._dict_to_match(row) for row in cursor.fetchall()]
+
+    def delete_match(self, match_id: str) -> None:
+        """Delete a match by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM matches WHERE id = ?", (match_id,))
+            conn.commit() 
