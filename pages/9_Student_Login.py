@@ -64,7 +64,13 @@ def register():
             help="Wählen Sie die Fachgebiete, die Sie interessieren."
         )
         
-        availability = st.text_input("Verfügbarkeit (z.B. Sommer 2025)")
+        # Replace availability with praxiserfahrungen
+        st.markdown("#### Praxiserfahrungen")
+        st.info("Beschreiben Sie Ihre bisherigen Praxiserfahrungen (z.B. Famulaturen, Praktika, etc.)")
+        praxiserfahrungen = st.text_area(
+            "Praxiserfahrungen",
+            help="Beschreiben Sie Ihre bisherigen Praxiserfahrungen im medizinischen Bereich."
+        )
         
         # Use multiselect for certifications/skills
         st.markdown("#### Praxis-Skills/Zertifizierungen")
@@ -89,7 +95,7 @@ def register():
                 "language": language,
                 "university": university,
                 "interests": interests,
-                "availability": availability,
+                "praxiserfahrungen": praxiserfahrungen,
                 "certifications": certifications
             }
             st.session_state.show_student_preview = True
@@ -105,8 +111,8 @@ def register():
         st.markdown("**Fachinteressen:**")
         for interest in st.session_state.new_student['interests']:
             st.markdown(f"- {interest}")
-        st.markdown("**Availability:**")
-        st.markdown(st.session_state.new_student['availability'])
+        st.markdown("**Praxiserfahrungen:**")
+        st.markdown(st.session_state.new_student['praxiserfahrungen'])
         st.markdown("**Praxis-Skills/Zertifizierungen:**")
         for cert in st.session_state.new_student['certifications']:
             st.markdown(f"- {cert}")
@@ -121,7 +127,7 @@ def register():
                         password=st.session_state.new_student['password'],
                         year=st.session_state.new_student['year'],
                         interests=st.session_state.new_student['interests'],
-                        availability=st.session_state.new_student['availability'],
+                        praxiserfahrungen=st.session_state.new_student['praxiserfahrungen'],
                         certifications=st.session_state.new_student['certifications'] if st.session_state.new_student['certifications'] else None
                     )
                     st.success("Registrierung erfolgreich! Bitte melden Sie sich an.")

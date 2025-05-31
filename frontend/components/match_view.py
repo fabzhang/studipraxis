@@ -112,9 +112,11 @@ def match_view():
                 st.markdown(f"**Abteilung:** {position.department}")
             
             with col3:
-                st.markdown(f"⏱️ {position.duration}")
                 if position.stipend:
-                    st.markdown(f"💰 {position.stipend}€/Monat")
+                    if position.stipend == "Bezahlung nach Tarifvertrag":
+                        st.markdown(f"💰 {position.stipend}")
+                    else:
+                        st.markdown(f"💰 {position.stipend}€/Stunde")
 
             # Expandable details section
             with st.expander("Mehr Details anzeigen"):
@@ -137,7 +139,10 @@ def match_view():
                     
                     if position.stipend:
                         st.markdown("##### Vergütung")
-                        st.markdown(f"💰 {position.stipend}€ pro Monat")
+                        if position.stipend == "Bezahlung nach Tarifvertrag":
+                            st.markdown(f"💰 {position.stipend}")
+                        else:
+                            st.markdown(f"💰 {position.stipend}€/Stunde")
                 
                 # Action buttons
                 if 'student_id' in st.session_state and st.session_state.student_id:
@@ -211,9 +216,8 @@ def match_view():
         st.markdown(f"**Hospital:** {hospital.name}")
         st.markdown(f"**Department:** {position.department}")
         st.markdown(f"**Location:** {hospital.location}")
-        st.markdown(f"**Duration:** {position.duration}")
         st.markdown(f"**Description:** {position.description}")
         st.markdown(f"**Requirements:** {', '.join(position.requirements)}")
         if position.stipend:
-            st.markdown(f"💰 **Stipend:** {position.stipend}€")
+            st.markdown(f"💰 **Stipend:** {position.stipend}")
         st.markdown("---") 

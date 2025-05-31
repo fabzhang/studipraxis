@@ -28,7 +28,7 @@ class DatabaseService:
                     password_hash TEXT NOT NULL,
                     year INTEGER NOT NULL,
                     interests TEXT NOT NULL,  -- JSON array of strings
-                    availability TEXT NOT NULL,
+                    praxiserfahrungen TEXT NOT NULL,
                     certifications TEXT,      -- JSON array of strings
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL
@@ -58,9 +58,9 @@ class DatabaseService:
                     department TEXT NOT NULL,
                     title TEXT NOT NULL,
                     description TEXT NOT NULL,
-                    duration TEXT NOT NULL,
                     requirements TEXT NOT NULL,  -- JSON array of strings
-                    stipend REAL,
+                    min_year TEXT NOT NULL,
+                    stipend TEXT,  -- Changed from REAL to TEXT
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL,
                     FOREIGN KEY (hospital_id) REFERENCES hospitals(id)
@@ -114,7 +114,7 @@ class DatabaseService:
             password_hash=row[3],
             year=row[4],
             interests=json.loads(row[5]),
-            availability=row[6],
+            praxiserfahrungen=row[6],
             certifications=json.loads(row[7]) if row[7] else None,
             created_at=datetime.fromisoformat(row[8]),
             updated_at=datetime.fromisoformat(row[9])
@@ -164,8 +164,8 @@ class DatabaseService:
             department=row[2],
             title=row[3],
             description=row[4],
-            duration=row[5],
-            requirements=json.loads(row[6]),
+            requirements=json.loads(row[5]),
+            min_year=row[6],
             stipend=row[7],
             created_at=datetime.fromisoformat(row[8]),
             updated_at=datetime.fromisoformat(row[9])
@@ -181,7 +181,7 @@ class DatabaseService:
             
             cursor.execute("""
                 INSERT INTO students (id, name, email, password_hash, year, interests,
-                                    availability, certifications, created_at, updated_at)
+                                    praxiserfahrungen, certifications, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 student_id,
@@ -190,7 +190,7 @@ class DatabaseService:
                 student.password_hash,
                 student.year,
                 json.dumps(student.interests),
-                student.availability,
+                student.praxiserfahrungen,
                 json.dumps(student.certifications) if student.certifications else None,
                 now,
                 now
@@ -226,7 +226,7 @@ class DatabaseService:
             return None
 
     def create_student_account(self, name: str, email: str, password: str, year: int, 
-                             interests: List[str], availability: str, 
+                             interests: List[str], praxiserfahrungen: str, 
                              certifications: Optional[List[str]] = None) -> StudentProfile:
         """Create a new student account."""
         with sqlite3.connect(self.db_path) as conn:
@@ -236,7 +236,7 @@ class DatabaseService:
             
             cursor.execute("""
                 INSERT INTO students (id, name, email, password_hash, year, interests,
-                                    availability, certifications, created_at, updated_at)
+                                    praxiserfahrungen, certifications, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 student_id,
@@ -245,7 +245,7 @@ class DatabaseService:
                 self._hash_password(password),
                 year,
                 json.dumps(interests),
-                availability,
+                praxiserfahrungen,
                 json.dumps(certifications) if certifications else None,
                 now,
                 now
@@ -264,7 +264,7 @@ class DatabaseService:
                     name = ?,
                     year = ?,
                     interests = ?,
-                    availability = ?,
+                    praxiserfahrungen = ?,
                     certifications = ?,
                     updated_at = ?
                 WHERE id = ?
@@ -272,7 +272,7 @@ class DatabaseService:
                 student.name,
                 student.year,
                 json.dumps(student.interests),
-                student.availability,
+                student.praxiserfahrungen,
                 json.dumps(student.certifications) if student.certifications else None,
                 now,
                 student.id
@@ -343,7 +343,7 @@ class DatabaseService:
             
             cursor.execute("""
                 INSERT INTO positions (id, hospital_id, department, title, description,
-                                     duration, requirements, stipend, created_at, updated_at)
+                                     requirements, min_year, stipend, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 position_id,
@@ -351,8 +351,8 @@ class DatabaseService:
                 position.department,
                 position.title,
                 position.description,
-                position.duration,
                 json.dumps(position.requirements),
+                position.min_year,
                 position.stipend,
                 now,
                 now

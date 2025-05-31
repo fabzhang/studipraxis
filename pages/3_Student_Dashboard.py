@@ -2,13 +2,17 @@ import streamlit as st
 from frontend.components.match_view import match_view
 from backend.services.data_service import DataService
 from form_options import INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
-from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
+#from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
 from frontend.components.footer import footer
+from frontend.components.header import header
 
 st.set_page_config(
     page_title="Student Dashboard - studiPraxis",
     page_icon="🔍"
 )
+
+# Add header
+header()
 
 # Compatibility helpers for old data formats
 def get_year_index(year_value):
@@ -60,7 +64,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
     student = data_service.get_student(st.session_state.student_id)
     
     # Create tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Alle Positionen", "Bewerbungen", "Gespeicherte Positionen", "Mein Profil", "Info"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Alle Positionen", "Bewerbungen", "Gespeicherte Positionen", "Mein Profil", "Informationen für Studierende"])
     
     with tab1:
         st.markdown("### Alle Positionen")
@@ -77,16 +81,16 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                     hospital = data_service.get_hospital(position.hospital_id)
                     if hospital:
                         with st.expander(f"{position.title} - {hospital.name}"):
-                            st.markdown(f"**Abteilung:** {position.department}")
-                            st.markdown(f"**Standort:** {hospital.location}")
-                            st.markdown(f"**Dauer:** {position.duration}")
+                            st.markdown(f"**Hospital:** {hospital.name}")
+                            st.markdown(f"**Department:** {position.department}")
+                            st.markdown(f"**Location:** {hospital.location}")
+                            st.markdown(f"**Description:** {position.description}")
+                            st.markdown(f"**Requirements:** {', '.join(position.requirements)}")
                             if position.stipend:
-                                st.markdown(f"**Vergütung:** {position.stipend}€/Monat")
-                            st.markdown("**Beschreibung:**")
-                            st.markdown(position.description)
-                            st.markdown("**Anforderungen:**")
-                            for req in position.requirements:
-                                st.markdown(f"- {req}")
+                                if position.stipend == "Bezahlung nach Tarifvertrag":
+                                    st.markdown(f"💰 {position.stipend}")
+                                else:
+                                    st.markdown(f"💰 {position.stipend}€/Stunde")
     
     with tab3:
         st.markdown("### Gespeicherte Positionen")
@@ -99,16 +103,16 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                     hospital = data_service.get_hospital(position.hospital_id)
                     if hospital:
                         with st.expander(f"{position.title} - {hospital.name}"):
-                            st.markdown(f"**Abteilung:** {position.department}")
-                            st.markdown(f"**Standort:** {hospital.location}")
-                            st.markdown(f"**Dauer:** {position.duration}")
+                            st.markdown(f"**Hospital:** {hospital.name}")
+                            st.markdown(f"**Department:** {position.department}")
+                            st.markdown(f"**Location:** {hospital.location}")
+                            st.markdown(f"**Description:** {position.description}")
+                            st.markdown(f"**Requirements:** {', '.join(position.requirements)}")
                             if position.stipend:
-                                st.markdown(f"**Vergütung:** {position.stipend}€/Monat")
-                            st.markdown("**Beschreibung:**")
-                            st.markdown(position.description)
-                            st.markdown("**Anforderungen:**")
-                            for req in position.requirements:
-                                st.markdown(f"- {req}")
+                                if position.stipend == "Bezahlung nach Tarifvertrag":
+                                    st.markdown(f"💰 {position.stipend}")
+                                else:
+                                    st.markdown(f"💰 {position.stipend}€/Stunde")
                             
                             # Add apply button
                             if st.button("Jetzt bewerben", key=f"apply_saved_{position.id}"):
@@ -150,8 +154,8 @@ if 'student_id' in st.session_state and st.session_state.student_id:
             st.markdown("**Interests:**")
             for interest in student.interests:
                 st.markdown(f"- {interest}")
-            st.markdown("**Availability:**")
-            st.markdown(student.availability)
+            st.markdown("**Praxiserfahrungen:**")
+            st.markdown(student.praxiserfahrungen if hasattr(student, 'praxiserfahrungen') else "Keine Angabe")
             st.markdown("**Certifications:**")
             if student.certifications:
                 for cert in student.certifications:
@@ -181,7 +185,14 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                         default=compatible_interests
                     )
                     
-                    new_availability = st.text_input("Verfügbarkeit", value=student.availability)
+                    # Replace availability with praxiserfahrungen
+                    st.markdown("#### Praxiserfahrungen")
+                    st.info("Beschreiben Sie Ihre bisherigen Praxiserfahrungen (z.B. Famulaturen, Praktika, etc.)")
+                    new_praxiserfahrungen = st.text_area(
+                        "Praxiserfahrungen",
+                        value=student.praxiserfahrungen if hasattr(student, 'praxiserfahrungen') else "",
+                        help="Beschreiben Sie Ihre bisherigen Praxiserfahrungen im medizinischen Bereich."
+                    )
                     
                     # Filter certifications for compatibility with new options
                     compatible_certs = get_compatible_defaults(student.certifications, PRAXIS_SKILLS)
@@ -205,7 +216,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
                             # Always store as string format now
                             student.year = new_year
                             student.interests = new_interests
-                            student.availability = new_availability
+                            student.praxiserfahrungen = new_praxiserfahrungen
                             student.certifications = new_certifications if new_certifications else None
                             data_service.update_student(student)
                             st.success("Profil erfolgreich aktualisiert!")

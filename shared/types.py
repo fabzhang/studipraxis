@@ -8,9 +8,9 @@ class StudentProfile:
     name: str
     email: str
     password_hash: str
-    year: int
+    year: str  # Changed from int to str to match STUDY_YEAR_OPTIONS
     interests: List[str]
-    availability: str
+    praxiserfahrungen: str
     certifications: Optional[List[str]]
     created_at: datetime
     updated_at: datetime
@@ -34,26 +34,25 @@ class Position:
     department: str
     title: str
     description: str
-    duration: str
     requirements: List[str]
-    stipend: Optional[float]
+    min_year: str  # Changed from int to str to match STUDY_YEAR_OPTIONS
+    stipend: str  # Changed from float to str to support "Bezahlung nach Tarifvertrag"
     created_at: datetime
     updated_at: datetime
 
 @dataclass
 class Message:
     id: str
+    match_id: str
     sender_id: str
-    receiver_id: str
     content: str
     created_at: datetime
-    read: bool
 
 @dataclass
 class Match:
     id: str
-    student_id: str
     position_id: str
-    status: str  # 'pending', 'accepted', 'rejected'
+    student_id: str
+    status: str  # 'saved', 'applied', 'accepted', 'rejected'
     created_at: datetime
     updated_at: datetime 

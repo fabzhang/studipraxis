@@ -23,10 +23,10 @@ class DataService:
         return self.db_service.authenticate_student(email, password)
 
     def create_student_account(self, name: str, email: str, password: str, year: int, 
-                             interests: List[str], availability: str, 
+                             interests: List[str], praxiserfahrungen: str, 
                              certifications: Optional[List[str]] = None) -> StudentProfile:
         return self.db_service.create_student_account(
-            name, email, password, year, interests, availability, certifications
+            name, email, password, year, interests, praxiserfahrungen, certifications
         )
 
     def update_student(self, student: StudentProfile) -> StudentProfile:

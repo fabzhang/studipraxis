@@ -1,7 +1,7 @@
 import streamlit as st
 from backend.services.data_service import DataService
 from shared.types import Position
-from shared.categories import MEDICAL_SPECIALTIES, MEDICAL_CERTIFICATIONS
+from form_options import INTEREST_FIELDS, PRAXIS_SKILLS, STUDY_YEAR_OPTIONS
 from datetime import datetime
 from shared.utils import generate_mailto_link
 
@@ -27,7 +27,7 @@ if not hospital:
 st.markdown(f"### Willkommen, {hospital.name}!")
 
 # Create tabs for different sections
-tab1, tab2, tab3, tab4 = st.tabs(["Positionen verwalten", "Bewerbungen", "Profil", "Info"])
+tab1, tab2, tab3, tab4 = st.tabs(["Positionen verwalten", "Bewerbungen", "Profil", "Informationen für Arbeitgeber"])
 
 with tab1:
     st.markdown("#### Positionen verwalten")
@@ -35,29 +35,41 @@ with tab1:
     # Add new position form
     with st.expander("Neue Position hinzufügen"):
         with st.form("new_position_form"):
-            # Use selectbox for department
+            # Use selectbox for department (using INTEREST_FIELDS)
             st.markdown("#### Abteilung")
             st.info("Wählen Sie die Abteilung aus der Liste aus.")
             department = st.selectbox(
                 "Abteilung",
-                options=MEDICAL_SPECIALTIES,
+                options=INTEREST_FIELDS,
                 help="Wählen Sie die Abteilung für die Position."
             )
             
             title = st.text_input("Positionstitel")
             description = st.text_area("Beschreibung")
-            duration = st.text_input("Dauer (z.B. 3 Monate)")
             
-            # Use multiselect for requirements
+            # Use multiselect for requirements (using PRAXIS_SKILLS)
             st.markdown("#### Anforderungen")
-            st.info("Wählen Sie die erforderlichen Zertifizierungen aus der Liste aus.")
+            st.info("Wählen Sie die erforderlichen Praxis-Skills aus der Liste aus.")
             requirements = st.multiselect(
                 "Anforderungen",
-                options=MEDICAL_CERTIFICATIONS,
-                help="Wählen Sie die erforderlichen Zertifizierungen für die Position."
+                options=PRAXIS_SKILLS,
+                help="Wählen Sie die erforderlichen Praxis-Skills für die Position."
             )
             
-            stipend = st.number_input("Vergütung (€)", min_value=0.0, step=100.0)
+            # Add minimum study year requirement
+            st.markdown("#### Mindeststudienjahr")
+            st.info("Wählen Sie das erforderliche Mindeststudienjahr aus.")
+            min_year = st.selectbox(
+                "Mindeststudienjahr",
+                options=STUDY_YEAR_OPTIONS,
+                help="Wählen Sie das erforderliche Mindeststudienjahr für die Position."
+            )
+            
+            stipend = st.text_input(
+                "Vergütung",
+                value="Bezahlung nach Tarifvertrag",
+                help="Geben Sie 'Bezahlung nach Tarifvertrag' ein oder einen Stundenlohn in Euro (z.B. '15')"
+            )
             
             submitted = st.form_submit_button("Position hinzufügen")
             if submitted:
@@ -65,8 +77,8 @@ with tab1:
                     "department": department,
                     "title": title,
                     "description": description,
-                    "duration": duration,
                     "requirements": requirements,
+                    "min_year": min_year,
                     "stipend": stipend
                 }
                 st.session_state.show_modal = True
@@ -84,10 +96,13 @@ with tab1:
             st.markdown(f"🏥 {hospital.name}")
         with col2:
             st.markdown(f"**Abteilung:** {pos['department']}")
+            st.markdown(f"**Mindeststudienjahr:** {pos['min_year']}")
         with col3:
-            st.markdown(f"⏱️ {pos['duration']}")
             if pos['stipend']:
-                st.markdown(f"💰 {pos['stipend']}€/Monat")
+                if pos['stipend'] == "Bezahlung nach Tarifvertrag":
+                    st.markdown(f"💰 {pos['stipend']}")
+                else:
+                    st.markdown(f"💰 {pos['stipend']}€/Stunde")
         st.markdown("---")
         # Details section
         st.markdown("#### Position Details")
@@ -115,8 +130,8 @@ with tab1:
                         department=pos['department'],
                         title=pos['title'],
                         description=pos['description'],
-                        duration=pos['duration'],
                         requirements=pos['requirements'],
+                        min_year=pos['min_year'],
                         stipend=pos['stipend'],
                         created_at=None,  # Will be set by service
                         updated_at=None   # Will be set by service
@@ -144,8 +159,12 @@ with tab1:
         for position in positions:
             with st.expander(f"{position.title} - {position.department}"):
                 st.markdown(f"**Beschreibung:** {position.description}")
-                st.markdown(f"**Dauer:** {position.duration}")
-                st.markdown(f"**Vergütung:** {position.stipend}€")
+                st.markdown(f"**Mindeststudienjahr:** {position.min_year}")
+                if position.stipend:
+                    if position.stipend == "Bezahlung nach Tarifvertrag":
+                        st.markdown(f"**Vergütung:** {position.stipend}")
+                    else:
+                        st.markdown(f"**Vergütung:** {position.stipend}€/Stunde")
                 st.markdown("**Anforderungen:**")
                 for req in position.requirements:
                     st.markdown(f"- {req}")
