@@ -158,32 +158,106 @@ with tab1:
     else:
         for position in positions:
             with st.expander(f"{position.title} - {position.department}"):
-                st.markdown(f"**Beschreibung:** {position.description}")
-                st.markdown(f"**Mindeststudienjahr:** {position.min_year}")
-                if position.stipend:
-                    if position.stipend == "Bezahlung nach Tarifvertrag":
-                        st.markdown(f"**Vergütung:** {position.stipend}")
-                    else:
-                        st.markdown(f"**Vergütung:** {position.stipend}€/Stunde")
-                st.markdown("**Anforderungen:**")
-                for req in position.requirements:
-                    st.markdown(f"- {req}")
-                
-                # Edit and delete buttons
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Bearbeiten", key=f"edit_{position.id}"):
-                        st.session_state.editing_position = position.id
-                        st.rerun()
-                with col2:
-                    if st.button("Löschen", key=f"delete_{position.id}"):
-                        if st.session_state.get(f"confirm_delete_{position.id}"):
-                            data_service.delete_position(position.id)
-                            st.success("Position gelöscht!")
+                # Show edit form if this position is being edited
+                if st.session_state.get("editing_position") == position.id:
+                    with st.form(f"edit_position_form_{position.id}"):
+                        st.markdown("#### Position bearbeiten")
+                        
+                        # Department selection
+                        new_department = st.selectbox(
+                            "Abteilung",
+                            options=INTEREST_FIELDS,
+                            index=INTEREST_FIELDS.index(position.department) if position.department in INTEREST_FIELDS else 0,
+                            help="Wählen Sie die Abteilung für die Position."
+                        )
+                        
+                        # Title and description
+                        new_title = st.text_input("Positionstitel", value=position.title)
+                        new_description = st.text_area("Beschreibung", value=position.description)
+                        
+                        # Requirements - filter out any requirements that are not in PRAXIS_SKILLS
+                        valid_requirements = [req for req in position.requirements if req in PRAXIS_SKILLS]
+                        new_requirements = st.multiselect(
+                            "Anforderungen",
+                            options=PRAXIS_SKILLS,
+                            default=valid_requirements,
+                            help="Wählen Sie die erforderlichen Praxis-Skills für die Position."
+                        )
+                        
+                        # Minimum year
+                        new_min_year = st.selectbox(
+                            "Mindeststudienjahr",
+                            options=STUDY_YEAR_OPTIONS,
+                            index=STUDY_YEAR_OPTIONS.index(position.min_year) if position.min_year in STUDY_YEAR_OPTIONS else 0,
+                            help="Wählen Sie das erforderliche Mindeststudienjahr für die Position."
+                        )
+                        
+                        # Stipend
+                        new_stipend = st.text_input(
+                            "Vergütung",
+                            value=position.stipend,
+                            help="Geben Sie 'Bezahlung nach Tarifvertrag' ein oder einen Stundenlohn in Euro (z.B. '15')"
+                        )
+                        
+                        # Form buttons
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            save_button = st.form_submit_button("Änderungen speichern")
+                        with col2:
+                            cancel_button = st.form_submit_button("Abbrechen")
+                        
+                        if save_button:
+                            try:
+                                updated_position = Position(
+                                    id=position.id,
+                                    hospital_id=position.hospital_id,
+                                    department=new_department,
+                                    title=new_title,
+                                    description=new_description,
+                                    requirements=new_requirements,
+                                    min_year=new_min_year,
+                                    stipend=new_stipend,
+                                    created_at=position.created_at,
+                                    updated_at=datetime.now()
+                                )
+                                data_service.update_position(updated_position)
+                                st.success("Position erfolgreich aktualisiert!")
+                                del st.session_state.editing_position
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
+                        
+                        if cancel_button:
+                            del st.session_state.editing_position
                             st.rerun()
+                else:
+                    # Display position details
+                    st.markdown(f"**Beschreibung:** {position.description}")
+                    st.markdown(f"**Mindeststudienjahr:** {position.min_year}")
+                    if position.stipend:
+                        if position.stipend == "Bezahlung nach Tarifvertrag":
+                            st.markdown(f"**Vergütung:** {position.stipend}")
                         else:
-                            st.session_state[f"confirm_delete_{position.id}"] = True
-                            st.warning("Klicken Sie erneut auf 'Löschen' um zu bestätigen.")
+                            st.markdown(f"**Vergütung:** {position.stipend}€/Stunde")
+                    st.markdown("**Anforderungen:**")
+                    for req in position.requirements:
+                        st.markdown(f"- {req}")
+                    
+                    # Edit and delete buttons
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Bearbeiten", key=f"edit_{position.id}"):
+                            st.session_state.editing_position = position.id
+                            st.rerun()
+                    with col2:
+                        if st.button("Löschen", key=f"delete_{position.id}"):
+                            if st.session_state.get(f"confirm_delete_{position.id}"):
+                                data_service.delete_position(position.id)
+                                st.success("Position gelöscht!")
+                                st.rerun()
+                            else:
+                                st.session_state[f"confirm_delete_{position.id}"] = True
+                                st.warning("Klicken Sie erneut auf 'Löschen' um zu bestätigen.")
 
 with tab2:
     st.markdown("#### Bewerbungen")

@@ -1,9 +1,10 @@
 import sqlite3
 from pathlib import Path
 import hashlib
+from datetime import datetime
 
 def update_student_schema():
-    print("Updating student schema to include email and password...")
+    print("Updating student schema to rename availability to praxiserfahrungen...")
     
     # Connect to the database
     db_path = Path("data/studipraxis.db")
@@ -17,7 +18,7 @@ def update_student_schema():
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         
-        # Create new students table with email and password
+        # Create new students table with renamed column
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS students_new (
                 id TEXT PRIMARY KEY,
@@ -26,7 +27,7 @@ def update_student_schema():
                 password_hash TEXT NOT NULL,
                 year INTEGER NOT NULL,
                 interests TEXT NOT NULL,  -- JSON array of strings
-                availability TEXT NOT NULL,
+                praxiserfahrungen TEXT NOT NULL,
                 certifications TEXT,      -- JSON array of strings
                 created_at TIMESTAMP NOT NULL,
                 updated_at TIMESTAMP NOT NULL
@@ -37,23 +38,28 @@ def update_student_schema():
         cursor.execute("SELECT * FROM students")
         students = cursor.fetchall()
         
+        # Get current timestamp
+        now = datetime.now().isoformat()
+        
         # Migrate students to new schema
         for i, student in enumerate(students):
             student_id = student[0]
             name = student[1]
-            year = student[2]
-            interests = student[3]
-            availability = student[4]
-            certifications = student[5]
-            created_at = student[6]
-            updated_at = student[7]
+            email = student[2]
+            password_hash = student[3]
+            year = student[4]
+            interests = student[5]
+            availability = student[6]  # This will be migrated to praxiserfahrungen
+            certifications = student[7]
+            created_at = student[8] if student[8] else now
+            updated_at = student[9] if student[9] else now
             
             # Create a unique email for each student
             email = f"{name.lower().replace(' ', '_')}_{i}@example.com"
             
             cursor.execute("""
                 INSERT INTO students_new (id, name, email, password_hash, year, interests,
-                                        availability, certifications, created_at, updated_at)
+                                        praxiserfahrungen, certifications, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 student_id,
@@ -62,7 +68,7 @@ def update_student_schema():
                 password_hash,
                 year,
                 interests,
-                availability,
+                availability,  # Migrate availability to praxiserfahrungen
                 certifications,
                 created_at,
                 updated_at

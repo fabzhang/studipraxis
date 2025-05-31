@@ -1,10 +1,14 @@
 import streamlit as st
 from frontend.components.footer import footer
+from frontend.components.header import header
 
 st.set_page_config(
     page_title="Kontakt - studiPraxis",
     page_icon="📧"
 )
+
+# Add header
+header()
 
 st.markdown("## Kontakt")
 

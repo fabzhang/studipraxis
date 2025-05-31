@@ -1,10 +1,14 @@
 import streamlit as st
 from frontend.components.footer import footer
+from frontend.components.header import header
 
 st.set_page_config(
     page_title="Impressum - studiPraxis",
     page_icon="ℹ️"
 )
+
+# Add header
+header()
 
 st.markdown("## Impressum")
 
