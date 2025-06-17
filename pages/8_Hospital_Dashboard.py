@@ -27,7 +27,30 @@ if not hospital:
 st.markdown(f"### Willkommen, {hospital.name}!")
 
 # Create tabs for different sections
-tab1, tab2, tab3, tab4 = st.tabs(["Positionen verwalten", "Bewerbungen", "Profil", "Informationen für Arbeitgeber"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])
+
+# Initialize session state for tab switching if not exists
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = "Positionen verwalten"
+
+# Initialize filter states if not exists
+if 'selected_year' not in st.session_state:
+    st.session_state.selected_year = "Alle"
+if 'selected_interests' not in st.session_state:
+    st.session_state.selected_interests = []
+if 'selected_skills' not in st.session_state:
+    st.session_state.selected_skills = []
+
+# Function to switch tabs
+def switch_tab(tab_name):
+    st.session_state.active_tab = tab_name
+    st.rerun()
+
+# Handle tab switching
+if st.session_state.active_tab == "Studierende durchsuchen":
+    tab3 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])[2]
+else:
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])
 
 with tab1:
     st.markdown("#### Positionen verwalten")
@@ -244,12 +267,19 @@ with tab1:
                         st.markdown(f"- {req}")
                     
                     # Edit and delete buttons
-                    col1, col2 = st.columns(2)
+                    col1, col2, col3 = st.columns(3)
                     with col1:
+                        if st.button("Passende Kandidaten anzeigen", key=f"show_matches_{position.id}"):
+                            # Store filter values in session state
+                            st.session_state.selected_year = position.min_year
+                            st.session_state.selected_interests = [position.department]
+                            st.session_state.selected_skills = position.requirements
+                            switch_tab("Studierende durchsuchen")
+                    with col2:
                         if st.button("Bearbeiten", key=f"edit_{position.id}"):
                             st.session_state.editing_position = position.id
                             st.rerun()
-                    with col2:
+                    with col3:
                         if st.button("Löschen", key=f"delete_{position.id}"):
                             if st.session_state.get(f"confirm_delete_{position.id}"):
                                 data_service.delete_position(position.id)
@@ -279,7 +309,6 @@ with tab2:
                     with st.expander(f"Bewerbung von {student.name}"):
                         st.markdown(f"**Name:** {student.name}")
                         st.markdown(f"**Studienjahr:** {student.year}")
-                        st.markdown(f"**Verfügbarkeit:** {student.availability}")
                         st.markdown("**Interessen:**")
                         for interest in student.interests:
                             st.markdown(f"- {interest}")
@@ -315,6 +344,97 @@ Mit freundlichen Grüßen
         st.info("Noch keine Bewerbungen vorhanden.")
 
 with tab3:
+    st.markdown("#### Studierende durchsuchen")
+    
+    # Create filter columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        selected_year = st.selectbox(
+            "Studienjahr",
+            ["Alle"] + STUDY_YEAR_OPTIONS,
+            index=STUDY_YEAR_OPTIONS.index(st.session_state.selected_year) if st.session_state.selected_year in STUDY_YEAR_OPTIONS else 0,
+            help="Filtern nach Studienjahr"
+        )
+        # Update session state
+        st.session_state.selected_year = selected_year
+    
+    with col2:
+        selected_interests = st.multiselect(
+            "Fachinteressen",
+            options=INTEREST_FIELDS,
+            default=st.session_state.selected_interests,
+            help="Filtern nach Fachinteressen"
+        )
+        # Update session state
+        st.session_state.selected_interests = selected_interests
+    
+    with col3:
+        selected_skills = st.multiselect(
+            "Praxis-Skills",
+            options=PRAXIS_SKILLS,
+            default=st.session_state.selected_skills,
+            help="Filtern nach Praxis-Skills"
+        )
+        # Update session state
+        st.session_state.selected_skills = selected_skills
+    
+    # Get all students
+    all_students = data_service.get_all_students()
+    
+    # Apply filters
+    filtered_students = []
+    for student in all_students:
+        # Filter by study year
+        if selected_year != "Alle" and student.year != selected_year:
+            continue
+            
+        # Filter by interests
+        if selected_interests and not any(interest in student.interests for interest in selected_interests):
+            continue
+            
+        # Filter by skills (if student has certifications)
+        if selected_skills and student.certifications:
+            if not any(skill in student.certifications for skill in selected_skills):
+                continue
+        
+        filtered_students.append(student)
+    
+    # Display results
+    if not filtered_students:
+        st.info("Keine Studierenden gefunden, die den gewählten Kriterien entsprechen.")
+    else:
+        st.markdown(f"**Gefundene Studierende:** {len(filtered_students)}")
+        
+        for student in filtered_students:
+            with st.expander(f"{student.name} - {student.year}"):
+                # Display student details
+                st.markdown(f"**Studienjahr:** {student.year}")
+                
+                if student.interests:
+                    st.markdown("**Fachinteressen:**")
+                    for interest in student.interests:
+                        st.markdown(f"- {interest}")
+                
+                if student.certifications:
+                    st.markdown("**Praxis-Skills:**")
+                    for cert in student.certifications:
+                        st.markdown(f"- {cert}")
+                
+                # Add contact button
+                if st.button("📧 Kontakt aufnehmen", key=f"contact_student_{student.id}"):
+                    subject = f"Interesse an einer Zusammenarbeit - {hospital.name}"
+                    body = f"""Hallo {student.name},
+
+wir haben Ihr Profil auf studiPraxis.de gesehen und würden uns gerne mit Ihnen über mögliche Praktika oder Werkstudententätigkeiten austauschen.
+
+Mit freundlichen Grüßen
+{hospital.name}"""
+                    
+                    mailto_link = generate_mailto_link(student.email, subject, body)
+                    st.markdown(f'<a href="{mailto_link}" target="_blank">E-Mail öffnen</a>', unsafe_allow_html=True)
+
+with tab4:
     st.markdown("#### Profil")
     logout_placeholder = st.empty()
     if logout_placeholder.button("🚪 Logout", use_container_width=True):
@@ -349,7 +469,7 @@ with tab3:
                 except Exception as e:
                     st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
 
-with tab4:
+with tab5:
 
     st.markdown("**[Jetzt kostenlos registrieren und ein Stellenangebot aufgeben]**")
 

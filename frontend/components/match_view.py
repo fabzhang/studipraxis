@@ -65,12 +65,28 @@ def match_view():
         st.info("No positions available yet.")
         return
     
-    # Filter by department - use all INTEREST_FIELDS options
-    selected_department = st.selectbox(
-        "Filter by Department",
-        ["All"] + INTEREST_FIELDS,
-        help="Filter positions by department"
-    )
+    # Get all hospitals for the filter
+    hospitals = data_service.get_hospitals()
+    hospital_names = ["Alle Kliniken"] + sorted([h.name for h in hospitals])
+    
+    # Create two columns for filters
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Filter by department - use all INTEREST_FIELDS options
+        selected_department = st.selectbox(
+            "Filter by Department",
+            ["All"] + INTEREST_FIELDS,
+            help="Filter positions by department"
+        )
+    
+    with col2:
+        # Filter by hospital
+        selected_hospital = st.selectbox(
+            "Filter by Hospital",
+            hospital_names,
+            help="Filter positions by hospital"
+        )
     
     # Additional filters (only shown if SHOW_ADDITIONAL_FILTERS is True)
     selected_year = "All"
@@ -108,6 +124,15 @@ def match_view():
         # Apply filters
         if selected_department != "All" and position.department != selected_department:
             continue
+            
+        # Get hospital info
+        hospital = data_service.get_hospital(position.hospital_id)
+        if not hospital:
+            continue
+            
+        # Apply hospital filter
+        if selected_hospital != "Alle Kliniken" and hospital.name != selected_hospital:
+            continue
         
         if SHOW_ADDITIONAL_FILTERS:
             if selected_year != "All" and STUDY_YEAR_OPTIONS.index(position.min_year) > STUDY_YEAR_OPTIONS.index(selected_year):
@@ -115,11 +140,6 @@ def match_view():
             
             if selected_requirements and not all(req in position.requirements for req in selected_requirements):
                 continue
-        
-        # Get hospital info
-        hospital = data_service.get_hospital(position.hospital_id)
-        if not hospital:
-            continue
         
         # Create expander for position details
         with st.expander(f"{position.title} - {hospital.name}"):
