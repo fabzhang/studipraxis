@@ -1,8 +1,10 @@
 import os
 import json
+import hashlib
 from datetime import datetime
 from supabase import create_client, Client
 from shared.types import StudentProfile, HospitalProfile, Position, Match
+from uuid import uuid4
 
 class DatabaseService:
     def __init__(self):
@@ -188,25 +190,32 @@ class DatabaseService:
     
     def create_position(self, position: Position) -> Position:
         """Create a new position."""
-        try:
-            data = {
-                "id": position.id,
-                "hospital_id": position.hospital_id,
-                "department": position.department,
-                "title": position.title,
-                "description": position.description,
-                "requirements": json.dumps(position.requirements),
-                "min_year": position.min_year,
-                "stipend": position.stipend,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            }
-            
-            result = self.supabase.table("positions").insert(data).execute()
-            return position
-        except Exception as e:
-            print(f"Error creating position: {e}")
-            raise
+        position_id = str(uuid4())
+        data = {
+            "id": position_id,
+            "hospital_id": position.hospital_id,
+            "department": position.department,
+            "title": position.title,
+            "description": position.description,
+            "requirements": json.dumps(position.requirements),
+            "min_year": position.min_year,
+            "stipend": position.stipend,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        self.supabase.table("positions").insert(data).execute()
+        return Position(
+            id=position_id,
+            hospital_id=position.hospital_id,
+            department=position.department,
+            title=position.title,
+            description=position.description,
+            requirements=position.requirements,
+            min_year=position.min_year,
+            stipend=position.stipend,
+            created_at=data["created_at"],
+            updated_at=data["updated_at"]
+        )
     
     def get_position(self, position_id: str) -> Position:
         """Get a position by ID."""
@@ -424,4 +433,99 @@ class DatabaseService:
             return True
         except Exception as e:
             print(f"Error deleting match: {e}")
-            return False 
+            return False
+    
+    def authenticate_student(self, email: str, password: str):
+        """Authenticate a student by email and password."""
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        result = self.supabase.table("students").select("*").eq("email", email).eq("password_hash", password_hash).execute()
+        if result.data:
+            row = result.data[0]
+            return StudentProfile(
+                id=row["id"],
+                name=row["name"],
+                email=row["email"],
+                password_hash=row["password_hash"],
+                year=row["year"],
+                interests=json.loads(row["interests"]) if row["interests"] else [],
+                praxiserfahrungen=row["praxiserfahrungen"],
+                certifications=json.loads(row["certifications"]) if row["certifications"] else [],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"]
+            )
+        return None
+
+    def authenticate_hospital(self, email: str, password: str):
+        """Authenticate a hospital by email and password."""
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        result = self.supabase.table("hospitals").select("*").eq("email", email).eq("password_hash", password_hash).execute()
+        if result.data:
+            row = result.data[0]
+            return HospitalProfile(
+                id=row["id"],
+                name=row["name"],
+                email=row["email"],
+                password_hash=row["password_hash"],
+                location=row["location"],
+                latitude=row["latitude"],
+                longitude=row["longitude"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"]
+            )
+        return None
+
+    def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float):
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        hospital_id = str(uuid4())
+        data = {
+            "id": hospital_id,
+            "name": name,
+            "email": email,
+            "password_hash": password_hash,
+            "location": location,
+            "latitude": latitude,
+            "longitude": longitude,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        self.supabase.table("hospitals").insert(data).execute()
+        return HospitalProfile(
+            id=hospital_id,
+            name=name,
+            email=email,
+            password_hash=password_hash,
+            location=location,
+            latitude=latitude,
+            longitude=longitude,
+            created_at=data["created_at"],
+            updated_at=data["updated_at"]
+        )
+
+    def create_student_account(self, name: str, email: str, password: str, year, interests, praxiserfahrungen, certifications=None):
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        student_id = str(uuid4())
+        data = {
+            "id": student_id,
+            "name": name,
+            "email": email,
+            "password_hash": password_hash,
+            "year": year,
+            "interests": json.dumps(interests),
+            "praxiserfahrungen": praxiserfahrungen,
+            "certifications": json.dumps(certifications) if certifications else None,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }
+        self.supabase.table("students").insert(data).execute()
+        return StudentProfile(
+            id=student_id,
+            name=name,
+            email=email,
+            password_hash=password_hash,
+            year=year,
+            interests=interests,
+            praxiserfahrungen=praxiserfahrungen,
+            certifications=certifications,
+            created_at=data["created_at"],
+            updated_at=data["updated_at"]
+        ) 
