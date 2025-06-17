@@ -1,568 +1,427 @@
-import sqlite3
-from pathlib import Path
-from typing import List, Optional
-from datetime import datetime
-import uuid
+import os
 import json
-import hashlib
-
-from shared.types import StudentProfile, HospitalProfile, Message, Match, Position
+from datetime import datetime
+from supabase import create_client, Client
+from shared.types import StudentProfile, HospitalProfile, Position, Match
 
 class DatabaseService:
     def __init__(self):
-        self.db_path = Path("data/studipraxis.db")
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._init_db()
-
-    def _init_db(self):
-        """Initialize the database with required tables."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
+        """Initialize database connection."""
+        # Get Supabase credentials from environment variables
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_key = os.getenv("SUPABASE_KEY")
+        
+        if not self.supabase_url or not self.supabase_key:
+            raise ValueError("Supabase credentials not found in environment variables")
             
-            # Create students table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS students (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    year INTEGER NOT NULL,
-                    interests TEXT NOT NULL,  -- JSON array of strings
-                    praxiserfahrungen TEXT NOT NULL,
-                    certifications TEXT,      -- JSON array of strings
-                    created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
-                )
-            """)
-            
-            # Create hospitals table (now as accounts)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS hospitals (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    location TEXT NOT NULL,
-                    latitude REAL NOT NULL,
-                    longitude REAL NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
-                )
-            """)
-            
-            # Create positions table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS positions (
-                    id TEXT PRIMARY KEY,
-                    hospital_id TEXT NOT NULL,
-                    department TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    requirements TEXT NOT NULL,  -- JSON array of strings
-                    min_year TEXT NOT NULL,
-                    stipend TEXT,  -- Changed from REAL to TEXT
-                    created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL,
-                    FOREIGN KEY (hospital_id) REFERENCES hospitals(id)
-                )
-            """)
-            
-            # Create messages table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id TEXT PRIMARY KEY,
-                    sender_id TEXT NOT NULL,
-                    receiver_id TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    read BOOLEAN NOT NULL DEFAULT 0,
-                    FOREIGN KEY (sender_id) REFERENCES students(id),
-                    FOREIGN KEY (receiver_id) REFERENCES hospitals(id)
-                )
-            """)
-            
-            # Create matches table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS matches (
-                    id TEXT PRIMARY KEY,
-                    student_id TEXT NOT NULL,
-                    position_id TEXT NOT NULL,
-                    status TEXT NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL,
-                    FOREIGN KEY (student_id) REFERENCES students(id),
-                    FOREIGN KEY (position_id) REFERENCES positions(id)
-                )
-            """)
-            
-            conn.commit()
-
-    def _hash_password(self, password: str) -> str:
-        """Hash a password for storing."""
-        return hashlib.sha256(password.encode()).hexdigest()
-
-    def _verify_password(self, stored_hash: str, provided_password: str) -> bool:
-        """Verify a stored password against a provided password."""
-        return stored_hash == self._hash_password(provided_password)
-
-    def _dict_to_student(self, row: tuple) -> StudentProfile:
-        """Convert a database row to a StudentProfile object."""
-        return StudentProfile(
-            id=row[0],
-            name=row[1],
-            email=row[2],
-            password_hash=row[3],
-            year=row[4],
-            interests=json.loads(row[5]),
-            praxiserfahrungen=row[6],
-            certifications=json.loads(row[7]) if row[7] else None,
-            created_at=datetime.fromisoformat(row[8]),
-            updated_at=datetime.fromisoformat(row[9])
-        )
-
-    def _dict_to_hospital(self, row: tuple) -> HospitalProfile:
-        """Convert a database row to a HospitalProfile object."""
-        return HospitalProfile(
-            id=row[0],
-            name=row[1],
-            email=row[2],
-            password_hash=row[3],
-            location=row[4],
-            latitude=row[5],
-            longitude=row[6],
-            created_at=datetime.fromisoformat(row[7]),
-            updated_at=datetime.fromisoformat(row[8])
-        )
-
-    def _dict_to_message(self, row: tuple) -> Message:
-        """Convert a database row to a Message object."""
-        return Message(
-            id=row[0],
-            sender_id=row[1],
-            receiver_id=row[2],
-            content=row[3],
-            created_at=datetime.fromisoformat(row[4]),
-            read=bool(row[5])
-        )
-
-    def _dict_to_match(self, row: tuple) -> Match:
-        """Convert a database row to a Match object."""
-        return Match(
-            id=row[0],
-            student_id=row[1],
-            position_id=row[2],
-            status=row[3],
-            created_at=datetime.fromisoformat(row[4]),
-            updated_at=datetime.fromisoformat(row[5])
-        )
-
-    def _dict_to_position(self, row: tuple) -> Position:
-        """Convert a database row to a Position object."""
-        return Position(
-            id=row[0],
-            hospital_id=row[1],
-            department=row[2],
-            title=row[3],
-            description=row[4],
-            requirements=json.loads(row[5]),
-            min_year=row[6],
-            stipend=row[7],
-            created_at=datetime.fromisoformat(row[8]),
-            updated_at=datetime.fromisoformat(row[9])
-        )
-
-    # Student operations
+        # Initialize Supabase client
+        self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
+    
+    def get_connection(self):
+        """Get database connection."""
+        return self.supabase
+    
     def create_student(self, student: StudentProfile) -> StudentProfile:
         """Create a new student profile."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            student_id = str(uuid.uuid4())
+        try:
+            data = {
+                "id": student.id,
+                "name": student.name,
+                "email": student.email,
+                "password_hash": student.password_hash,
+                "year": student.year,
+                "interests": json.dumps(student.interests),
+                "praxiserfahrungen": student.praxiserfahrungen,
+                "certifications": json.dumps(student.certifications) if student.certifications else None,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
             
-            cursor.execute("""
-                INSERT INTO students (id, name, email, password_hash, year, interests,
-                                    praxiserfahrungen, certifications, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                student_id,
-                student.name,
-                student.email,
-                student.password_hash,
-                student.year,
-                json.dumps(student.interests),
-                student.praxiserfahrungen,
-                json.dumps(student.certifications) if student.certifications else None,
-                now,
-                now
-            ))
-            
-            conn.commit()
-            return self.get_student(student_id)
-
-    def get_student(self, student_id: str) -> Optional[StudentProfile]:
+            result = self.supabase.table("students").insert(data).execute()
+            return student
+        except Exception as e:
+            print(f"Error creating student: {e}")
+            raise
+    
+    def get_student(self, student_id: str) -> StudentProfile:
         """Get a student profile by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-            row = cursor.fetchone()
-            return self._dict_to_student(row) if row else None
-
-    def get_students(self) -> List[StudentProfile]:
+        try:
+            result = self.supabase.table("students").select("*").eq("id", student_id).execute()
+            if result.data:
+                row = result.data[0]
+                return StudentProfile(
+                    id=row["id"],
+                    name=row["name"],
+                    email=row["email"],
+                    password_hash=row["password_hash"],
+                    year=row["year"],
+                    interests=json.loads(row["interests"]) if row["interests"] else [],
+                    praxiserfahrungen=row["praxiserfahrungen"],
+                    certifications=json.loads(row["certifications"]) if row["certifications"] else [],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting student: {e}")
+            return None
+    
+    def get_all_students(self) -> list[StudentProfile]:
         """Get all student profiles."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM students")
-            return [self._dict_to_student(row) for row in cursor.fetchall()]
-
-    def authenticate_student(self, email: str, password: str) -> Optional[StudentProfile]:
-        """Authenticate a student account."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM students WHERE email = ?", (email,))
-            row = cursor.fetchone()
+        try:
+            result = self.supabase.table("students").select("*").execute()
+            students = []
+            for row in result.data:
+                students.append(StudentProfile(
+                    id=row["id"],
+                    name=row["name"],
+                    email=row["email"],
+                    password_hash=row["password_hash"],
+                    year=row["year"],
+                    interests=json.loads(row["interests"]) if row["interests"] else [],
+                    praxiserfahrungen=row["praxiserfahrungen"],
+                    certifications=json.loads(row["certifications"]) if row["certifications"] else [],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return students
+        except Exception as e:
+            print(f"Error getting all students: {e}")
+            return []
+    
+    def update_student(self, student_id: str, **kwargs) -> StudentProfile:
+        """Update a student profile."""
+        try:
+            # Convert lists to JSON strings
+            if "interests" in kwargs:
+                kwargs["interests"] = json.dumps(kwargs["interests"])
+            if "certifications" in kwargs:
+                kwargs["certifications"] = json.dumps(kwargs["certifications"])
             
-            if row and self._verify_password(row[3], password):
-                return self._dict_to_student(row)
+            kwargs["updated_at"] = datetime.now().isoformat()
+            
+            result = self.supabase.table("students").update(kwargs).eq("id", student_id).execute()
+            if result.data:
+                return self.get_student(student_id)
             return None
-
-    def create_student_account(self, name: str, email: str, password: str, year: int, 
-                             interests: List[str], praxiserfahrungen: str, 
-                             certifications: Optional[List[str]] = None) -> StudentProfile:
-        """Create a new student account."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            student_id = str(uuid.uuid4())
-            
-            cursor.execute("""
-                INSERT INTO students (id, name, email, password_hash, year, interests,
-                                    praxiserfahrungen, certifications, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                student_id,
-                name,
-                email,
-                self._hash_password(password),
-                year,
-                json.dumps(interests),
-                praxiserfahrungen,
-                json.dumps(certifications) if certifications else None,
-                now,
-                now
-            ))
-            
-            conn.commit()
-            return self.get_student(student_id)
-
-    def update_student(self, student: StudentProfile) -> StudentProfile:
-        """Update an existing student profile by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            cursor.execute("""
-                UPDATE students SET
-                    name = ?,
-                    year = ?,
-                    interests = ?,
-                    praxiserfahrungen = ?,
-                    certifications = ?,
-                    updated_at = ?
-                WHERE id = ?
-            """, (
-                student.name,
-                student.year,
-                json.dumps(student.interests),
-                student.praxiserfahrungen,
-                json.dumps(student.certifications) if student.certifications else None,
-                now,
-                student.id
-            ))
-            conn.commit()
-            return self.get_student(student.id)
-
-    # Hospital account operations
-    def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float) -> HospitalProfile:
-        """Create a new hospital account."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            hospital_id = str(uuid.uuid4())
-            
-            cursor.execute("""
-                INSERT INTO hospitals (id, name, email, password_hash, location, 
-                                     latitude, longitude, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                hospital_id,
-                name,
-                email,
-                self._hash_password(password),
-                location,
-                latitude,
-                longitude,
-                now,
-                now
-            ))
-            
-            conn.commit()
-            return self.get_hospital(hospital_id)
-
-    def authenticate_hospital(self, email: str, password: str) -> Optional[HospitalProfile]:
-        """Authenticate a hospital account."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM hospitals WHERE email = ?", (email,))
-            row = cursor.fetchone()
-            
-            if row and self._verify_password(row[3], password):
-                return self._dict_to_hospital(row)
+        except Exception as e:
+            print(f"Error updating student: {e}")
             return None
-
-    def get_hospital(self, hospital_id: str) -> Optional[HospitalProfile]:
+    
+    def create_hospital(self, hospital: HospitalProfile) -> HospitalProfile:
+        """Create a new hospital profile."""
+        try:
+            data = {
+                "id": hospital.id,
+                "name": hospital.name,
+                "email": hospital.email,
+                "password_hash": hospital.password_hash,
+                "location": hospital.location,
+                "latitude": hospital.latitude,
+                "longitude": hospital.longitude,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            result = self.supabase.table("hospitals").insert(data).execute()
+            return hospital
+        except Exception as e:
+            print(f"Error creating hospital: {e}")
+            raise
+    
+    def get_hospital(self, hospital_id: str) -> HospitalProfile:
         """Get a hospital profile by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM hospitals WHERE id = ?", (hospital_id,))
-            row = cursor.fetchone()
-            return self._dict_to_hospital(row) if row else None
-
-    def get_hospitals(self) -> List[HospitalProfile]:
+        try:
+            result = self.supabase.table("hospitals").select("*").eq("id", hospital_id).execute()
+            if result.data:
+                row = result.data[0]
+                return HospitalProfile(
+                    id=row["id"],
+                    name=row["name"],
+                    email=row["email"],
+                    password_hash=row["password_hash"],
+                    location=row["location"],
+                    latitude=row["latitude"],
+                    longitude=row["longitude"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting hospital: {e}")
+            return None
+    
+    def get_hospitals(self) -> list[HospitalProfile]:
         """Get all hospital profiles."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM hospitals")
-            return [self._dict_to_hospital(row) for row in cursor.fetchall()]
-
-    # Position operations
+        try:
+            result = self.supabase.table("hospitals").select("*").execute()
+            hospitals = []
+            for row in result.data:
+                hospitals.append(HospitalProfile(
+                    id=row["id"],
+                    name=row["name"],
+                    email=row["email"],
+                    password_hash=row["password_hash"],
+                    location=row["location"],
+                    latitude=row["latitude"],
+                    longitude=row["longitude"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return hospitals
+        except Exception as e:
+            print(f"Error getting hospitals: {e}")
+            return []
+    
+    def update_hospital(self, hospital_id: str, **kwargs) -> HospitalProfile:
+        """Update a hospital profile."""
+        try:
+            kwargs["updated_at"] = datetime.now().isoformat()
+            
+            result = self.supabase.table("hospitals").update(kwargs).eq("id", hospital_id).execute()
+            if result.data:
+                return self.get_hospital(hospital_id)
+            return None
+        except Exception as e:
+            print(f"Error updating hospital: {e}")
+            return None
+    
     def create_position(self, position: Position) -> Position:
         """Create a new position."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            position_id = str(uuid.uuid4())
+        try:
+            data = {
+                "id": position.id,
+                "hospital_id": position.hospital_id,
+                "department": position.department,
+                "title": position.title,
+                "description": position.description,
+                "requirements": json.dumps(position.requirements),
+                "min_year": position.min_year,
+                "stipend": position.stipend,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
             
-            cursor.execute("""
-                INSERT INTO positions (id, hospital_id, department, title, description,
-                                     requirements, min_year, stipend, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                position_id,
-                position.hospital_id,
-                position.department,
-                position.title,
-                position.description,
-                json.dumps(position.requirements),
-                position.min_year,
-                position.stipend,
-                now,
-                now
-            ))
-            
-            conn.commit()
-            return self.get_position(position_id)
-
-    def get_positions(self, hospital_id: Optional[str] = None) -> List[Position]:
-        """Get all positions, optionally filtered by hospital."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            if hospital_id:
-                cursor.execute("SELECT * FROM positions WHERE hospital_id = ?", (hospital_id,))
-            else:
-                cursor.execute("SELECT * FROM positions")
-            return [self._dict_to_position(row) for row in cursor.fetchall()]
-
-    def get_position(self, position_id: str) -> Optional[Position]:
+            result = self.supabase.table("positions").insert(data).execute()
+            return position
+        except Exception as e:
+            print(f"Error creating position: {e}")
+            raise
+    
+    def get_position(self, position_id: str) -> Position:
         """Get a position by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM positions WHERE id = ?", (position_id,))
-            row = cursor.fetchone()
-            return self._dict_to_position(row) if row else None
-
+        try:
+            result = self.supabase.table("positions").select("*").eq("id", position_id).execute()
+            if result.data:
+                row = result.data[0]
+                return Position(
+                    id=row["id"],
+                    hospital_id=row["hospital_id"],
+                    department=row["department"],
+                    title=row["title"],
+                    description=row["description"],
+                    requirements=json.loads(row["requirements"]) if row["requirements"] else [],
+                    min_year=row["min_year"],
+                    stipend=row["stipend"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting position: {e}")
+            return None
+    
+    def get_positions(self, hospital_id: str = None) -> list[Position]:
+        """Get all positions, optionally filtered by hospital."""
+        try:
+            query = self.supabase.table("positions").select("*")
+            if hospital_id:
+                query = query.eq("hospital_id", hospital_id)
+            
+            result = query.execute()
+            positions = []
+            for row in result.data:
+                positions.append(Position(
+                    id=row["id"],
+                    hospital_id=row["hospital_id"],
+                    department=row["department"],
+                    title=row["title"],
+                    description=row["description"],
+                    requirements=json.loads(row["requirements"]) if row["requirements"] else [],
+                    min_year=row["min_year"],
+                    stipend=row["stipend"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return positions
+        except Exception as e:
+            print(f"Error getting positions: {e}")
+            return []
+    
     def update_position(self, position: Position) -> Position:
-        """Update an existing position."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
+        """Update a position."""
+        try:
+            data = {
+                "department": position.department,
+                "title": position.title,
+                "description": position.description,
+                "requirements": json.dumps(position.requirements),
+                "min_year": position.min_year,
+                "stipend": position.stipend,
+                "updated_at": datetime.now().isoformat()
+            }
             
-            cursor.execute("""
-                UPDATE positions SET
-                    department = ?,
-                    title = ?,
-                    description = ?,
-                    requirements = ?,
-                    min_year = ?,
-                    stipend = ?,
-                    updated_at = ?
-                WHERE id = ?
-            """, (
-                position.department,
-                position.title,
-                position.description,
-                json.dumps(position.requirements),
-                position.min_year,
-                position.stipend,
-                now,
-                position.id
-            ))
-            
-            conn.commit()
-            return self.get_position(position.id)
-
-    def delete_position(self, position_id: str) -> None:
-        """Delete a position by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM positions WHERE id = ?", (position_id,))
-            conn.commit()
-
-    # Message operations
-    def create_message(self, message: Message) -> Message:
-        """Create a new message."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            message_id = str(uuid.uuid4())
-            
-            cursor.execute("""
-                INSERT INTO messages (id, sender_id, receiver_id, content,
-                                    created_at, read)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                message_id,
-                message.sender_id,
-                message.receiver_id,
-                message.content,
-                message.created_at.isoformat(),
-                message.read
-            ))
-            
-            conn.commit()
-            return self.get_message(message_id)
-
-    def get_message(self, message_id: str) -> Optional[Message]:
-        """Get a message by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
-            row = cursor.fetchone()
-            return self._dict_to_message(row) if row else None
-
-    def get_messages(self, user_id: str) -> List[Message]:
-        """Get all messages for a user."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM messages 
-                WHERE sender_id = ? OR receiver_id = ?
-                ORDER BY created_at DESC
-            """, (user_id, user_id))
-            return [self._dict_to_message(row) for row in cursor.fetchall()]
-
-    # Match operations
+            result = self.supabase.table("positions").update(data).eq("id", position.id).execute()
+            if result.data:
+                return self.get_position(position.id)
+            return None
+        except Exception as e:
+            print(f"Error updating position: {e}")
+            return None
+    
+    def delete_position(self, position_id: str) -> bool:
+        """Delete a position."""
+        try:
+            result = self.supabase.table("positions").delete().eq("id", position_id).execute()
+            return True
+        except Exception as e:
+            print(f"Error deleting position: {e}")
+            return False
+    
     def create_match(self, match: Match) -> Match:
         """Create a new match."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            match_id = str(uuid.uuid4())
-            now = datetime.now().isoformat()
+        try:
+            data = {
+                "id": match.id,
+                "student_id": match.student_id,
+                "position_id": match.position_id,
+                "status": match.status,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
             
-            cursor.execute("""
-                INSERT INTO matches (id, student_id, position_id, status,
-                                   created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                match_id,
-                match.student_id,
-                match.position_id,
-                match.status,
-                now,
-                now
-            ))
-            
-            conn.commit()
-            return self.get_match(match_id)
-
-    def get_match(self, match_id: str) -> Optional[Match]:
+            result = self.supabase.table("matches").insert(data).execute()
+            return match
+        except Exception as e:
+            print(f"Error creating match: {e}")
+            raise
+    
+    def get_match(self, match_id: str) -> Match:
         """Get a match by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM matches WHERE id = ?", (match_id,))
-            row = cursor.fetchone()
-            return self._dict_to_match(row) if row else None
-
-    def get_matches(self, user_id: str) -> List[Match]:
-        """Get all matches for a user."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM matches 
-                WHERE student_id = ? OR position_id = ?
-                ORDER BY created_at DESC
-            """, (user_id, user_id))
-            return [self._dict_to_match(row) for row in cursor.fetchall()]
-
-    def get_match_by_student_and_position(self, student_id: str, position_id: str) -> Optional[Match]:
+        try:
+            result = self.supabase.table("matches").select("*").eq("id", match_id).execute()
+            if result.data:
+                row = result.data[0]
+                return Match(
+                    id=row["id"],
+                    student_id=row["student_id"],
+                    position_id=row["position_id"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting match: {e}")
+            return None
+    
+    def get_match_by_student_and_position(self, student_id: str, position_id: str) -> Match:
         """Get a match by student and position IDs."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM matches 
-                WHERE student_id = ? AND position_id = ?
-            """, (student_id, position_id))
-            row = cursor.fetchone()
-            return self._dict_to_match(row) if row else None
-
-    def update_match_status(self, match_id: str, status: str) -> Match:
-        """Update the status of a match."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            
-            cursor.execute("""
-                UPDATE matches 
-                SET status = ?, updated_at = ?
-                WHERE id = ?
-            """, (status, now, match_id))
-            
-            conn.commit()
-            return self.get_match(match_id)
-
-    def get_applications_for_position(self, position_id: str) -> List[Match]:
-        """Get all applications for a position."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM matches 
-                WHERE position_id = ? AND status = 'applied'
-                ORDER BY created_at DESC
-            """, (position_id,))
-            return [self._dict_to_match(row) for row in cursor.fetchall()]
-
-    def get_saved_positions_for_student(self, student_id: str) -> List[Match]:
-        """Get all saved positions for a student."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM matches 
-                WHERE student_id = ? AND status = 'saved'
-                ORDER BY created_at DESC
-            """, (student_id,))
-            return [self._dict_to_match(row) for row in cursor.fetchall()]
-
-    def get_applied_positions_for_student(self, student_id: str) -> List[Match]:
+        try:
+            result = self.supabase.table("matches").select("*").eq("student_id", student_id).eq("position_id", position_id).execute()
+            if result.data:
+                row = result.data[0]
+                return Match(
+                    id=row["id"],
+                    student_id=row["student_id"],
+                    position_id=row["position_id"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting match by student and position: {e}")
+            return None
+    
+    def get_applied_positions_for_student(self, student_id: str) -> list[Match]:
         """Get all applied positions for a student."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM matches 
-                WHERE student_id = ? AND status = 'applied'
-                ORDER BY created_at DESC
-            """, (student_id,))
-            return [self._dict_to_match(row) for row in cursor.fetchall()]
-
-    def delete_match(self, match_id: str) -> None:
-        """Delete a match by ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM matches WHERE id = ?", (match_id,))
-            conn.commit() 
+        try:
+            result = self.supabase.table("matches").select("*").eq("student_id", student_id).eq("status", "applied").execute()
+            matches = []
+            for row in result.data:
+                matches.append(Match(
+                    id=row["id"],
+                    student_id=row["student_id"],
+                    position_id=row["position_id"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return matches
+        except Exception as e:
+            print(f"Error getting applied positions: {e}")
+            return []
+    
+    def get_saved_positions_for_student(self, student_id: str) -> list[Match]:
+        """Get all saved positions for a student."""
+        try:
+            result = self.supabase.table("matches").select("*").eq("student_id", student_id).eq("status", "saved").execute()
+            matches = []
+            for row in result.data:
+                matches.append(Match(
+                    id=row["id"],
+                    student_id=row["student_id"],
+                    position_id=row["position_id"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return matches
+        except Exception as e:
+            print(f"Error getting saved positions: {e}")
+            return []
+    
+    def get_applications_for_position(self, position_id: str) -> list[Match]:
+        """Get all applications for a position."""
+        try:
+            result = self.supabase.table("matches").select("*").eq("position_id", position_id).eq("status", "applied").execute()
+            matches = []
+            for row in result.data:
+                matches.append(Match(
+                    id=row["id"],
+                    student_id=row["student_id"],
+                    position_id=row["position_id"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return matches
+        except Exception as e:
+            print(f"Error getting applications for position: {e}")
+            return []
+    
+    def update_match_status(self, match_id: str, status: str) -> Match:
+        """Update a match's status."""
+        try:
+            data = {
+                "status": status,
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            result = self.supabase.table("matches").update(data).eq("id", match_id).execute()
+            if result.data:
+                return self.get_match(match_id)
+            return None
+        except Exception as e:
+            print(f"Error updating match status: {e}")
+            return None
+    
+    def delete_match(self, match_id: str) -> bool:
+        """Delete a match."""
+        try:
+            result = self.supabase.table("matches").delete().eq("id", match_id).execute()
+            return True
+        except Exception as e:
+            print(f"Error deleting match: {e}")
+            return False 

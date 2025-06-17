@@ -18,7 +18,12 @@ class DataService:
         return self.db_service.get_students()
 
     def get_student(self, student_id: str) -> Optional[StudentProfile]:
+        """Get a student profile by ID."""
         return self.db_service.get_student(student_id)
+
+    def get_all_students(self) -> List[StudentProfile]:
+        """Get all student profiles."""
+        return self.db_service.get_all_students()
 
     def authenticate_student(self, email: str, password: str) -> Optional[StudentProfile]:
         return self.db_service.authenticate_student(email, password)
@@ -30,8 +35,8 @@ class DataService:
             name, email, password, year, interests, praxiserfahrungen, certifications
         )
 
-    def update_student(self, student: StudentProfile) -> StudentProfile:
-        return self.db_service.update_student(student)
+    def update_student(self, student_id: str, **kwargs) -> StudentProfile:
+        return self.db_service.update_student(student_id, **kwargs)
 
     # Hospital account operations
     def create_hospital_account(self, name: str, email: str, password: str, location: str, latitude: float, longitude: float) -> HospitalProfile:

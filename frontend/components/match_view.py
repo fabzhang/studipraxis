@@ -11,7 +11,7 @@ import uuid
 # Toggle for additional filters
 SHOW_ADDITIONAL_FILTERS = False  # Set to True to show year and requirements filters
 
-def create_map(hospitals, positions, selected_department="Alle Abteilungen"):
+def create_map(hospitals, positions, selected_department="Alle Abteilungen", selected_hospital="Alle Kliniken"):
     # Create a map centered on Hamburg
     m = folium.Map(location=[53.5511, 9.9937], zoom_start=12)
     
@@ -23,6 +23,10 @@ def create_map(hospitals, positions, selected_department="Alle Abteilungen"):
         # Filter by department if selected
         if selected_department != "All":
             hospital_positions = [p for p in hospital_positions if p.department == selected_department]
+            
+        # Filter by hospital if selected
+        if selected_hospital != "Alle Kliniken" and hospital.name != selected_hospital:
+            continue
         
         if not hospital_positions:
             continue
@@ -107,7 +111,7 @@ def match_view():
         )
     
     # Create and display the interactive map
-    m = create_map(data_service.get_hospitals(), positions, selected_department)
+    m = create_map(data_service.get_hospitals(), positions, selected_department, selected_hospital)
     folium_static(m)
     
     # Add legend or help text
