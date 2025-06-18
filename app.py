@@ -1,6 +1,8 @@
 import streamlit as st
 from PIL import Image
 from frontend.components.footer import footer
+from dotenv import load_dotenv
+load_dotenv()
 
 st.set_page_config(
     page_title="studiPraxis.de",

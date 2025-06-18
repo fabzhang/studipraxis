@@ -83,7 +83,7 @@ def hospital_form():
                 st.rerun()
             except Exception as e:
                 st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
-
+        
         # Add coordinates selection
         st.markdown("### Standort")
         st.info("Bitte wählen Sie die Klinik aus der Liste oder geben Sie die Koordinaten manuell ein.")
@@ -102,4 +102,4 @@ def hospital_form():
                 longitude = st.number_input("Längengrad", value=9.9937, format="%.4f")
         else:
             latitude, longitude = HAMBURG_COORDINATES[selected_hospital]
-            st.info(f"Koordinaten für {selected_hospital}: {latitude}, {longitude}") 
+            st.info(f"Koordinaten für {selected_hospital}: {latitude}, {longitude}")

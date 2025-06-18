@@ -1,0 +1,81 @@
+graph TD
+    A["🏠 Landing Page<br/>(app.py)"] --> B["👨‍🎓 Student Path<br/>(1_Student.py)"]
+    A --> C["🏥 Institution Path<br/>(2_Institution.py)"]
+    
+    B --> D["📝 Student Registration<br/>(9_Student_Login.py)"]
+    B --> E["ℹ️ Student Info<br/>(10_Student_Info.py)"]
+    
+    C --> F["📝 Hospital Registration<br/>(7_Hospital_Login.py)"]
+    C --> G["ℹ️ Institution Info<br/>(11_Institution_Info.py)"]
+    
+    D --> H["🎯 Student Dashboard<br/>(3_Student_Dashboard.py)"]
+    F --> I["🏥 Hospital Dashboard<br/>(8_Hospital_Dashboard.py)"]
+    
+    H --> J["Search & Apply<br/>to Positions"]
+    H --> K["Manage Applications<br/>& Saved Positions"]
+    H --> L["Edit Profile<br/>& Preferences"]
+    
+    I --> M["Create & Manage<br/>Positions"]
+    I --> N["Review Applications<br/>& Contact Students"]
+    I --> O["Hospital Profile<br/>Management"]
+    
+    J --> P["📧 Email Contact<br/>via Mailto Links"]
+    N --> P
+    
+    Q["🗄️ SQLite Database<br/>(studipraxis.db)"] --> R["Data Service<br/>(data_service.py)"]
+    R --> S["Database Service<br/>(database.py)"]
+    
+    S --> T["Students Table"]
+    S --> U["Hospitals Table"]
+    S --> V["Positions Table"]
+    S --> W["Matches Table"]
+    S --> X["Messages Table"]
+    
+    R --> H
+    R --> I
+    R --> Y["🗺️ Map View<br/>(map_view.py)"]
+    R --> Z["🔍 Match View<br/>(match_view.py)"]
+    
+    AA["📍 Geocoding Service<br/>(geopy/Nominatim)"] --> R
+    
+    AB["📄 Legal Pages"] --> AC["📞 Contact<br/>(12_Kontakt.py)"]
+    AB --> AD["📋 Terms<br/>(13_AGB.py)"]
+    AB --> AE["🔒 Privacy<br/>(14_Datenschutz.py)"]
+    AB --> AF["📝 Legal Notice<br/>(15_Impressum.py)"]
+    AB --> AG["👥 About Us<br/>(16_Who_We_Are.py)"]
+    
+    AH["🧩 Shared Components"] --> AI["Header Component<br/>(header.py)"]
+    AH --> AJ["Footer Component<br/>(footer.py)"]
+    AH --> AK["Form Components<br/>(student_form.py, hospital_form.py)"]
+    
+    AH --> AL["📊 Data Types<br/>(types.py)"]
+    AH --> AM["🛠️ Utilities<br/>(utils.py)"]
+    AH --> AN["📝 Form Options<br/>(form_options.py)"]
+    
+    subgraph "User Authentication Flow"
+        AO["Login/Register"] --> AP["Password Hashing"]
+        AP --> AQ["Session Management"]
+        AQ --> AR["Role-based Access"]
+    end
+    
+    subgraph "Position Matching System"
+        AS["Student Preferences"] --> AT["Position Requirements"]
+        AT --> AU["Match Algorithm"]
+        AU --> AV["Application Status"]
+        AV --> AW["Email Communication"]
+    end
+    
+    subgraph "Data Models"
+        AX["StudentProfile<br/>• Study Year<br/>• Interests<br/>• Experience<br/>• Certifications"]
+        AY["HospitalProfile<br/>• Name<br/>• Location<br/>• Address<br/>• Coordinates"]
+        AZ["Position<br/>• Department<br/>• Requirements<br/>• Stipend<br/>• Min Year"]
+        BA["Match<br/>• Student-Position Link<br/>• Status Tracking<br/>• Application History"]
+    end
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style H fill:#fff3e0
+    style I fill:#fff3e0
+    style Q fill:#fce4ec
+    style AA fill:#f1f8e9

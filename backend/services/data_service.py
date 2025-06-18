@@ -97,7 +97,7 @@ class DataService:
         return self.db_service.get_saved_positions_for_student(student_id)
 
     def get_applied_positions_for_student(self, student_id: str) -> List[Match]:
-        return self.db_service.get_applied_positions_for_student(student_id)
+        return self.db_service.get_applied_positions_for_student(student_id) 
 
     def delete_match(self, match_id: str) -> None:
         """Delete a match by ID."""

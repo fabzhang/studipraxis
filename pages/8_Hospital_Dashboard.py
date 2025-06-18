@@ -26,7 +26,7 @@ if not hospital:
 
 st.markdown(f"### Willkommen, {hospital.name}!")
 
-# Create tabs for different sections
+# Create tabs for different sections (do this only once)
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])
 
 # Initialize session state for tab switching if not exists
@@ -45,12 +45,6 @@ if 'selected_skills' not in st.session_state:
 def switch_tab(tab_name):
     st.session_state.active_tab = tab_name
     st.rerun()
-
-# Handle tab switching
-if st.session_state.active_tab == "Studierende durchsuchen":
-    tab3 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])[2]
-else:
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Positionen verwalten", "Bewerbungen", "Studierende durchsuchen", "Profil", "Informationen für Arbeitgeber"])
 
 with tab1:
     st.markdown("#### Positionen verwalten")

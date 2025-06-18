@@ -315,7 +315,7 @@ if 'student_id' in st.session_state and st.session_state.student_id:
         """, unsafe_allow_html=True)
 else:
     st.markdown("### Alle Positionen")
-    match_view()
+    match_view() 
 
 # Add footer at the bottom
 footer() 
